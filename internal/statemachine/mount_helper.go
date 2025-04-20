@@ -147,7 +147,7 @@ func parseMounts(procMount string, path string) ([]*mountPoint, error) {
 		fields := strings.Fields(line)
 		mountPath := fields[1]
 
-		if len(path) != 0 && !strings.HasPrefix(mountPath, path) {
+		if (len(path) != 0 && !strings.HasPrefix(mountPath, path)) || strings.Compare(mountPath, path) == 0 {
 			continue
 		}
 
