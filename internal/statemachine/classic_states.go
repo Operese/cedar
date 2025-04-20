@@ -31,120 +31,6 @@ var (
 	localePresentRegex = regexp.MustCompile(`(?m)^LANG=|LC_[A-Z_]+=`)
 )
 
-var buildGadgetTreeState = stateFunc{"build_gadget_tree", (*StateMachine).buildGadgetTree}
-
-// Build the gadget tree
-func (stateMachine *StateMachine) buildGadgetTree() error {
-	classicStateMachine := stateMachine.parent.(*ClassicStateMachine)
-
-	// make the gadget directory under scratch
-	gadgetDir := filepath.Join(stateMachine.tempDirs.scratch, "gadget")
-
-	err := classicStateMachine.prepareGadgetDir(gadgetDir)
-	if err != nil {
-		return err
-	}
-
-	makeCmd := execCommand("make")
-
-	// if a make target was specified then add it to the command
-	if classicStateMachine.ImageDef.Gadget.GadgetTarget != "" {
-		makeCmd.Args = append(makeCmd.Args, classicStateMachine.ImageDef.Gadget.GadgetTarget)
-	}
-
-	// add ARCH and SERIES environment variables for making the gadget tree
-	makeCmd.Env = append(makeCmd.Env, []string{
-		fmt.Sprintf("ARCH=%s", classicStateMachine.ImageDef.Architecture),
-		fmt.Sprintf("SERIES=%s", classicStateMachine.ImageDef.Series),
-	}...)
-	// add the current ENV to the command
-	makeCmd.Env = append(makeCmd.Env, os.Environ()...)
-	makeCmd.Dir = gadgetDir
-
-	makeOutput := helper.SetCommandOutput(makeCmd, classicStateMachine.commonFlags.Debug)
-
-	if err := makeCmd.Run(); err != nil {
-		return fmt.Errorf("Error running \"make\" in gadget source. "+
-			"Error is \"%s\". Full output below:\n%s",
-			err.Error(), makeOutput.String())
-	}
-
-	return nil
-}
-
-// prepareGadgetDir prepares the gadget directory prior to running the make command
-func (classicStateMachine *ClassicStateMachine) prepareGadgetDir(gadgetDir string) error {
-	err := osMkdir(gadgetDir, 0755)
-	if err != nil && !os.IsExist(err) {
-		return fmt.Errorf("Error creating scratch/gadget directory: %s", err.Error())
-	}
-
-	switch classicStateMachine.ImageDef.Gadget.GadgetType {
-	case "git":
-		err := cloneGitRepo(classicStateMachine.ImageDef, gadgetDir)
-		if err != nil {
-			return fmt.Errorf("Error cloning gadget repository: \"%s\"", err.Error())
-		}
-	case "directory":
-		gadgetTreePath := strings.TrimPrefix(classicStateMachine.ImageDef.Gadget.GadgetURL, "file://")
-		if !filepath.IsAbs(gadgetTreePath) {
-			gadgetTreePath = filepath.Join(classicStateMachine.ConfDefPath, gadgetTreePath)
-		}
-
-		// copy the source tree to the workdir
-		files, err := osReadDir(gadgetTreePath)
-		if err != nil {
-			return fmt.Errorf("Error reading gadget tree: %s", err.Error())
-		}
-		for _, gadgetFile := range files {
-			srcFile := filepath.Join(gadgetTreePath, gadgetFile.Name())
-			if err := osutilCopySpecialFile(srcFile, gadgetDir); err != nil {
-				return fmt.Errorf("Error copying gadget source: %s", err.Error())
-			}
-		}
-	}
-	return nil
-}
-
-var prepareGadgetTreeState = stateFunc{"prepare_gadget_tree", (*StateMachine).prepareGadgetTree}
-
-// Prepare the gadget tree
-func (stateMachine *StateMachine) prepareGadgetTree() error {
-	classicStateMachine := stateMachine.parent.(*ClassicStateMachine)
-	gadgetDir := filepath.Join(classicStateMachine.tempDirs.unpack, "gadget")
-	err := osMkdirAll(gadgetDir, 0755)
-	if err != nil && !os.IsExist(err) {
-		return fmt.Errorf("Error creating unpack directory: %s", err.Error())
-	}
-	// recursively copy the gadget tree to unpack/gadget
-	var gadgetTree string
-	if classicStateMachine.ImageDef.Gadget.GadgetType == "prebuilt" {
-		gadgetTree = strings.TrimPrefix(classicStateMachine.ImageDef.Gadget.GadgetURL, "file://")
-		if !filepath.IsAbs(gadgetTree) {
-			gadgetTree, err = filepath.Abs(gadgetTree)
-			if err != nil {
-				return fmt.Errorf("Error finding the absolute path of the gadget tree: %s", err.Error())
-			}
-		}
-	} else {
-		gadgetTree = filepath.Join(classicStateMachine.tempDirs.scratch, "gadget", "install")
-	}
-	entries, err := osReadDir(gadgetTree)
-	if err != nil {
-		return fmt.Errorf("Error reading gadget tree: %s", err.Error())
-	}
-	for _, gadgetEntry := range entries {
-		srcFile := filepath.Join(gadgetTree, gadgetEntry.Name())
-		if err := osutilCopySpecialFile(srcFile, gadgetDir); err != nil {
-			return fmt.Errorf("Error copying gadget tree entry: %s", err.Error())
-		}
-	}
-
-	classicStateMachine.YamlFilePath = filepath.Join(gadgetDir, gadgetYamlPathInTree)
-
-	return nil
-}
-
 // fixHostname set fresh hostname since debootstrap copies /etc/hostname from build environment
 func (stateMachine *StateMachine) fixHostname() error {
 	hostname := filepath.Join(stateMachine.tempDirs.chroot, "etc", "hostname")
@@ -159,8 +45,6 @@ func (stateMachine *StateMachine) fixHostname() error {
 	}
 	return nil
 }
-
-var createChrootState = stateFunc{"create_chroot", (*StateMachine).createChroot}
 
 // Bootstrap a chroot environment to install packages in. It will eventually
 // become the rootfs of the image

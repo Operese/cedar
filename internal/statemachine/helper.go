@@ -14,8 +14,6 @@ import (
 	"strings"
 
 	"github.com/diskfs/go-diskfs/disk"
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/snapcore/snapd/gadget"
 	"github.com/snapcore/snapd/gadget/quantity"
 	"github.com/snapcore/snapd/seed"
@@ -561,28 +559,6 @@ func generateGerminateCmd(imageDefinition imagedefinition.ImageDefinition) *exec
 	}
 
 	return germinateCmd
-}
-
-// cloneGitRepo takes options from the image definition and clones the git
-// repo with the corresponding options
-func cloneGitRepo(imageDefinition imagedefinition.ImageDefinition, workDir string) error {
-	// clone the repo
-	cloneOptions := &git.CloneOptions{
-		URL:          imageDefinition.Gadget.GadgetURL,
-		SingleBranch: true,
-		Depth:        1,
-	}
-	if imageDefinition.Gadget.GadgetBranch != "" {
-		cloneOptions.ReferenceName = plumbing.NewBranchReferenceName(imageDefinition.Gadget.GadgetBranch)
-	}
-
-	err := cloneOptions.Validate()
-	if err != nil {
-		return err
-	}
-
-	_, err = git.PlainClone(workDir, false, cloneOptions)
-	return err
 }
 
 // generateDebootstrapCmd generates the debootstrap command used to create a chroot

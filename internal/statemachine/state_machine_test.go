@@ -39,7 +39,6 @@ var testStates = []stateFunc{
 
 // for tests where we want to run all the states
 var allTestStates = []stateFunc{
-	{prepareGadgetTreeState.name, func(statemachine *StateMachine) error { return nil }},
 	{prepareClassicImageState.name, func(statemachine *StateMachine) error { return nil }},
 	{loadGadgetYamlState.name, func(statemachine *StateMachine) error { return nil }},
 	{populateClassicRootfsContentsState.name, func(statemachine *StateMachine) error { return nil }},
@@ -73,9 +72,6 @@ func mockBackupAndCopyResolvConfFail(string) error {
 }
 func mockBackupAndCopyResolvConfSuccess(string) error {
 	return nil
-}
-func mockRestoreResolvConf(string) error {
-	return fmt.Errorf("Test Error")
 }
 func mockCopyBlobSuccess([]string) error {
 	return nil
@@ -126,9 +122,6 @@ func mockRemoveAll(string) error {
 	return fmt.Errorf("Test error")
 }
 func mockRename(string, string) error {
-	return fmt.Errorf("Test error")
-}
-func mockTruncate(string, int64) error {
 	return fmt.Errorf("Test error")
 }
 func mockCreate(string) (*os.File, error) {
