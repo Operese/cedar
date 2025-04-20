@@ -4,7 +4,6 @@ package statemachine
 
 import (
 	"crypto/rand"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,7 +11,6 @@ import (
 	"time"
 
 	diskfs "github.com/diskfs/go-diskfs"
-	"github.com/google/uuid"
 	"github.com/snapcore/snapd/gadget"
 	"github.com/snapcore/snapd/gadget/quantity"
 	"github.com/snapcore/snapd/image"
@@ -82,28 +80,16 @@ type stateFunc struct {
 	function func(*StateMachine) error
 }
 
-// temporaryDirectories organizes the state machines, rootfs, unpack, and volumes dirs
-type temporaryDirectories struct {
-	rootfs  string // finale location of the built rootfs
-	unpack  string // directory holding the unpacked gadget tree (and thus boot assets)
-	volumes string // directory holding resulting partial images associated to volumes declared in the gadget.yaml
-	chroot  string // place where the rootfs is built and modified
-	scratch string // place to build and mount some directories at various stage
-}
-
 // StateMachine will hold the command line data, track the current state, and handle all function calls
 type StateMachine struct {
-	cleanWorkDir  bool          // whether or not to clean up the workDir
 	CurrentStep   string        // tracks the current progress of the state machine
 	StepsTaken    int           // counts the number of steps taken
-	ConfDefPath   string        // directory holding the model assertion / image definition file
 	YamlFilePath  string        // the location for the gadget yaml file
 	IsSeeded      bool          // core 20 images are seeded
 	RootfsVolName string        // volume on which the rootfs is located
 	RootfsPartNum int           // rootfs partition number
 	SectorSize    quantity.Size // parsed (converted) sector size
 	RootfsSize    quantity.Size
-	tempDirs      temporaryDirectories
 
 	series string
 
@@ -141,85 +127,6 @@ func (stateMachine *StateMachine) SetCommonOpts(commonOpts *commands.CommonOpts,
 	stateMachine.stateMachineFlags = stateMachineOpts
 }
 
-// readMetadata reads info about a partial state machine encoded as JSON from disk
-func (stateMachine *StateMachine) readMetadata(metadataFile string) error {
-	if !stateMachine.stateMachineFlags.Resume {
-		return nil
-	}
-	// open the cedar.json file and load the state
-	var partialStateMachine = &StateMachine{}
-	jsonfilePath := filepath.Join(stateMachine.stateMachineFlags.WorkDir, metadataFile)
-	jsonfile, err := os.ReadFile(jsonfilePath)
-	if err != nil {
-		return fmt.Errorf("error reading metadata file: %s", err.Error())
-	}
-
-	err = json.Unmarshal(jsonfile, partialStateMachine)
-	if err != nil {
-		return fmt.Errorf("failed to parse metadata file: %s", err.Error())
-	}
-
-	return stateMachine.loadState(partialStateMachine)
-}
-
-func (stateMachine *StateMachine) loadState(partialStateMachine *StateMachine) error {
-	stateMachine.StepsTaken = partialStateMachine.StepsTaken
-
-	if stateMachine.StepsTaken > len(stateMachine.states) {
-		return fmt.Errorf("invalid steps taken count (%d). The state machine only have %d steps", stateMachine.StepsTaken, len(stateMachine.states))
-	}
-
-	// delete all of the stateFuncs that have already run
-	stateMachine.states = stateMachine.states[stateMachine.StepsTaken:]
-
-	stateMachine.CurrentStep = partialStateMachine.CurrentStep
-	stateMachine.YamlFilePath = partialStateMachine.YamlFilePath
-	stateMachine.IsSeeded = partialStateMachine.IsSeeded
-	stateMachine.RootfsVolName = partialStateMachine.RootfsVolName
-	stateMachine.RootfsPartNum = partialStateMachine.RootfsPartNum
-
-	stateMachine.SectorSize = partialStateMachine.SectorSize
-	stateMachine.RootfsSize = partialStateMachine.RootfsSize
-
-	stateMachine.tempDirs.rootfs = filepath.Join(stateMachine.stateMachineFlags.WorkDir, "root")
-	stateMachine.tempDirs.unpack = filepath.Join(stateMachine.stateMachineFlags.WorkDir, "unpack")
-	stateMachine.tempDirs.volumes = filepath.Join(stateMachine.stateMachineFlags.WorkDir, "volumes")
-	stateMachine.tempDirs.chroot = filepath.Join(stateMachine.stateMachineFlags.WorkDir, "chroot")
-	stateMachine.tempDirs.scratch = filepath.Join(stateMachine.stateMachineFlags.WorkDir, "scratch")
-
-	stateMachine.GadgetInfo = partialStateMachine.GadgetInfo
-	stateMachine.ImageSizes = partialStateMachine.ImageSizes
-	stateMachine.VolumeOrder = partialStateMachine.VolumeOrder
-	stateMachine.VolumeNames = partialStateMachine.VolumeNames
-	stateMachine.MainVolumeName = partialStateMachine.MainVolumeName
-
-	stateMachine.Packages = partialStateMachine.Packages
-	stateMachine.Snaps = partialStateMachine.Snaps
-
-	if stateMachine.GadgetInfo != nil {
-		// Due to https://github.com/golang/go/issues/10415 we need to set back the volume
-		// structs we reset before encoding (see writeMetadata())
-		gadget.SetEnclosingVolumeInStructs(stateMachine.GadgetInfo.Volumes)
-
-		rebuildYamlIndex(stateMachine.GadgetInfo)
-	}
-
-	return nil
-}
-
-// rebuildYamlIndex reset the YamlIndex field in VolumeStructure
-// This field is not serialized (for a good reason) so it is lost when saving the metadata
-// We consider here the JSON serialization keeps the struct order and we can naively
-// consider the YamlIndex value is the same as the index of the structure in the structure slice.
-func rebuildYamlIndex(info *gadget.Info) {
-	for _, v := range info.Volumes {
-		for i, s := range v.Structure {
-			s.YamlIndex = i
-			v.Structure[i] = s
-		}
-	}
-}
-
 // displayStates print the calculated states
 func (s *StateMachine) displayStates() {
 	if !s.commonFlags.Debug && !s.commonFlags.DryRun {
@@ -249,83 +156,6 @@ func (s *StateMachine) displayStates() {
 	fmt.Println("\nContinuing")
 }
 
-// writeMetadata writes the state machine info to disk, encoded as JSON. This will be used when resuming a
-// partial state machine run
-func (stateMachine *StateMachine) writeMetadata(metadataFile string) error {
-	jsonfilePath := filepath.Join(stateMachine.stateMachineFlags.WorkDir, metadataFile)
-	jsonfile, err := os.OpenFile(jsonfilePath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
-	if err != nil && !os.IsExist(err) {
-		return fmt.Errorf("error opening JSON metadata file for writing: %s", jsonfilePath)
-	}
-	defer jsonfile.Close()
-
-	b, err := json.Marshal(stateMachine)
-	if err != nil {
-		return fmt.Errorf("failed to JSON encode metadata: %w", err)
-	}
-
-	_, err = jsonfile.Write(b)
-	if err != nil {
-		return fmt.Errorf("failed to write metadata to file: %w", err)
-	}
-	return nil
-}
-
-// generate work directory file structure
-func (stateMachine *StateMachine) makeTemporaryDirectories() error {
-	// if no workdir was specified, open a /tmp dir
-	if stateMachine.stateMachineFlags.WorkDir == "" {
-		stateMachine.stateMachineFlags.WorkDir = filepath.Join("/tmp", "cedar-"+uuid.NewString())
-		if err := osMkdir(stateMachine.stateMachineFlags.WorkDir, 0755); err != nil {
-			return fmt.Errorf("Failed to create temporary directory: %s", err.Error())
-		}
-		stateMachine.cleanWorkDir = true
-	} else {
-		err := osMkdirAll(stateMachine.stateMachineFlags.WorkDir, 0755)
-		if err != nil && !os.IsExist(err) {
-			return fmt.Errorf("Error creating work directory: %s", err.Error())
-		}
-	}
-
-	stateMachine.tempDirs.rootfs = filepath.Join(stateMachine.stateMachineFlags.WorkDir, "root")
-	stateMachine.tempDirs.unpack = filepath.Join(stateMachine.stateMachineFlags.WorkDir, "unpack")
-	stateMachine.tempDirs.volumes = filepath.Join(stateMachine.stateMachineFlags.WorkDir, "volumes")
-	stateMachine.tempDirs.chroot = filepath.Join(stateMachine.stateMachineFlags.WorkDir, "chroot")
-	stateMachine.tempDirs.scratch = filepath.Join(stateMachine.stateMachineFlags.WorkDir, "scratch")
-
-	tempDirs := []string{stateMachine.tempDirs.scratch, stateMachine.tempDirs.rootfs, stateMachine.tempDirs.unpack}
-	for _, tempDir := range tempDirs {
-		err := osMkdir(tempDir, 0755)
-		if err != nil && !os.IsExist(err) {
-			return fmt.Errorf("Error creating temporary directory \"%s\": \"%s\"", tempDir, err.Error())
-		}
-	}
-
-	return nil
-}
-
-// determineOutputDirectory sets the directory in which to place artifacts
-// and creates it if it doesn't already exist
-func (stateMachine *StateMachine) determineOutputDirectory() error {
-	if stateMachine.commonFlags.OutputDir == "" {
-		if stateMachine.cleanWorkDir { // no workdir specified, so create the image in the pwd
-			var err error
-			stateMachine.commonFlags.OutputDir, err = os.Getwd()
-			if err != nil {
-				return fmt.Errorf("Error creating OutputDir: %s", err.Error())
-			}
-		} else {
-			stateMachine.commonFlags.OutputDir = stateMachine.stateMachineFlags.WorkDir
-		}
-	} else {
-		err := osMkdirAll(stateMachine.commonFlags.OutputDir, 0755)
-		if err != nil && !os.IsExist(err) {
-			return fmt.Errorf("Error creating OutputDir: %s", err.Error())
-		}
-	}
-	return nil
-}
-
 // Run iterates through the state functions, stopping when appropriate based on --until and --thru
 func (stateMachine *StateMachine) Run() error {
 	if stateMachine.commonFlags.DryRun {
@@ -347,11 +177,6 @@ func (stateMachine *StateMachine) Run() error {
 			fmt.Printf("duration: %v\n", time.Since(start))
 		}
 		if err != nil {
-			// clean up work dir on error
-			cleanupErr := stateMachine.cleanup()
-			if cleanupErr != nil {
-				return fmt.Errorf("error during cleanup: %s while cleaning after stateFunc error: %w", cleanupErr.Error(), err)
-			}
 			return err
 		}
 		stateMachine.StepsTaken++
@@ -365,11 +190,5 @@ func (stateMachine *StateMachine) Run() error {
 
 // Teardown handles anything else that needs to happen after the states have finished running
 func (stateMachine *StateMachine) Teardown() error {
-	if stateMachine.commonFlags.DryRun {
-		return nil
-	}
-	if stateMachine.cleanWorkDir {
-		return stateMachine.cleanup()
-	}
-	return stateMachine.writeMetadata(metadataStateFile)
+	return nil
 }

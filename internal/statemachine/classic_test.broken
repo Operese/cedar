@@ -1217,7 +1217,7 @@ func TestExtractRootfsTar(t *testing.T) {
 			asserter.AssertErrNil(err, true)
 
 			for _, testFile := range tc.expectedFiles {
-				_, err := os.Stat(filepath.Join(stateMachine.tempDirs.chroot, testFile))
+				_, err := os.Stat(filepath.Join(stateMachine.Args.ImagePath, testFile))
 				if err != nil {
 					t.Errorf("File %s should be in chroot, but is missing", testFile)
 				}
@@ -1260,14 +1260,14 @@ func TestFailedExtractRootfsTar(t *testing.T) {
 	osMkdir = os.Mkdir
 
 	// clean up chroot directory
-	os.RemoveAll(stateMachine.tempDirs.chroot)
+	os.RemoveAll(stateMachine.Args.ImagePath)
 
 	// now test with the incorrect SHA256sum
 	err = stateMachine.extractRootfsTar()
 	asserter.AssertErrContains(err, "Calculated SHA256 sum of rootfs tarball")
 
 	// clean up chroot directory
-	os.RemoveAll(stateMachine.tempDirs.chroot)
+	os.RemoveAll(stateMachine.Args.ImagePath)
 
 	// use a tarball that doesn't exist to trigger a failure in computing
 	// the SHA256 sum
@@ -1390,7 +1390,7 @@ chpasswd:
 					}
 				}
 			})
-			stateMachine.tempDirs.chroot = tmpDir
+			stateMachine.Args.ImagePath = tmpDir
 
 			// this directory is expected to be present as it is installed by cloud-init
 			err = os.MkdirAll(path.Join(tmpDir, "etc/cloud/cloud.cfg.d"), 0777)
@@ -1465,7 +1465,7 @@ func TestStatemachine_customizeCloudInit_failed(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "")
 	asserter.AssertErrNil(err, true)
 	t.Cleanup(func() { os.RemoveAll(tmpDir) })
-	stateMachine.tempDirs.chroot = tmpDir
+	stateMachine.Args.ImagePath = tmpDir
 
 	stateMachine.ImageDef.Customization = &snaplist.Customization{
 		CloudInit: &snaplist.CloudInit{
@@ -1666,7 +1666,7 @@ func TestPrepareClassicImage(t *testing.T) {
 		storeRevision := snapInfo.Channels["latest/"+snapChannel].Revision.N
 		snapFileName := fmt.Sprintf("%s_%d.snap", snapName, storeRevision)
 
-		snapPath := filepath.Join(stateMachine.tempDirs.chroot,
+		snapPath := filepath.Join(stateMachine.Args.ImagePath,
 			"var", "lib", "snapd", "seed", "snaps", snapFileName)
 		_, err = os.Stat(snapPath)
 		if err != nil {
@@ -1729,7 +1729,7 @@ func TestClassicSnapRevisions(t *testing.T) {
 		revRegex, err := regexp.Compile(fmt.Sprintf("%s_(.*?).snap\n", snapInfo.SnapName))
 		asserter.AssertErrNil(err, true)
 		seedData, err := os.ReadFile(filepath.Join(
-			stateMachine.tempDirs.chroot,
+			stateMachine.Args.ImagePath,
 			"var",
 			"lib",
 			"snapd",
@@ -1813,7 +1813,7 @@ func TestFailedPrepareClassicImage(t *testing.T) {
 	// preseed the chroot, create a state.json file to trigger a reset, and mock some related functions
 	err = stateMachine.prepareClassicImage()
 	asserter.AssertErrNil(err, true)
-	_, err = os.Create(filepath.Join(stateMachine.tempDirs.chroot, "var", "lib", "snapd", "state.json"))
+	_, err = os.Create(filepath.Join(stateMachine.Args.ImagePath, "var", "lib", "snapd", "state.json"))
 	asserter.AssertErrNil(err, true)
 
 	seedOpen = mockSeedOpen
@@ -2049,11 +2049,11 @@ Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 
 			t.Cleanup(func() { os.RemoveAll(stateMachine.stateMachineFlags.WorkDir) })
 
-			err = os.MkdirAll(filepath.Join(stateMachine.tempDirs.chroot, "etc", "apt", "sources.list.d"), 0644)
+			err = os.MkdirAll(filepath.Join(stateMachine.Args.ImagePath, "etc", "apt", "sources.list.d"), 0644)
 			asserter.AssertErrNil(err, true)
 
-			sourcesListPath := filepath.Join(stateMachine.tempDirs.chroot, "etc", "apt", "sources.list")
-			deb822SourcesListPath := filepath.Join(stateMachine.tempDirs.chroot, "etc", "apt", "sources.list.d", "ubuntu.sources")
+			sourcesListPath := filepath.Join(stateMachine.Args.ImagePath, "etc", "apt", "sources.list")
+			deb822SourcesListPath := filepath.Join(stateMachine.Args.ImagePath, "etc", "apt", "sources.list.d", "ubuntu.sources")
 
 			err = osWriteFile(sourcesListPath, []byte(tc.existingSourcesList), 0644)
 			asserter.AssertErrNil(err, true)
@@ -2444,8 +2444,8 @@ func TestSuccessfulClassicRun(t *testing.T) {
 		asserter.AssertErrNil(err, true)
 	})
 
-	testHelperCheckPPAInstalled(t, &asserter, stateMachine.tempDirs.chroot)
-	testHelperCheckSnapInstalled(t, &asserter, stateMachine.tempDirs.chroot)
+	testHelperCheckPPAInstalled(t, &asserter, stateMachine.Args.ImagePath)
+	testHelperCheckSnapInstalled(t, &asserter, stateMachine.Args.ImagePath)
 
 	artifacts := map[string]string{
 		"pc-amd64.img":            "DOS/MBR boot sector",
@@ -2810,10 +2810,10 @@ func TestSuccessfulClassicRunNoArtifact(t *testing.T) {
 	})
 
 	// make sure packages were successfully installed from public and private ppas
-	testHelperCheckPPAInstalled(t, &asserter, stateMachine.tempDirs.chroot)
+	testHelperCheckPPAInstalled(t, &asserter, stateMachine.Args.ImagePath)
 
 	// make sure snaps from the correct channel were installed
-	testHelperCheckSnapInstalled(t, &asserter, stateMachine.tempDirs.chroot)
+	testHelperCheckSnapInstalled(t, &asserter, stateMachine.Args.ImagePath)
 }
 
 func TestSuccessfulRootfsGeneration(t *testing.T) {
@@ -3074,25 +3074,25 @@ func TestStateMachine_installPackages_checkcmds(t *testing.T) {
 
 	err := stateMachine.makeTemporaryDirectories()
 	asserter.AssertErrNil(err, true)
-	err = os.MkdirAll(stateMachine.tempDirs.chroot, 0755)
+	err = os.MkdirAll(stateMachine.Args.ImagePath, 0755)
 	asserter.AssertErrNil(err, true)
 
 	t.Cleanup(func() { os.RemoveAll(stateMachine.stateMachineFlags.WorkDir) })
 
 	// create an /usr/sbin/policy-rc.d in the chroot
-	err = os.MkdirAll(filepath.Join(stateMachine.tempDirs.chroot, "usr", "sbin"), 0755)
+	err = os.MkdirAll(filepath.Join(stateMachine.Args.ImagePath, "usr", "sbin"), 0755)
 	asserter.AssertErrNil(err, true)
-	_, err = os.Create(filepath.Join(stateMachine.tempDirs.chroot, "usr", "sbin", "policy-rc.d"))
+	_, err = os.Create(filepath.Join(stateMachine.Args.ImagePath, "usr", "sbin", "policy-rc.d"))
 	asserter.AssertErrNil(err, true)
 
 	// create an /sbin/start-stop-daemon in the chroot
-	err = os.MkdirAll(filepath.Join(stateMachine.tempDirs.chroot, "sbin"), 0755)
+	err = os.MkdirAll(filepath.Join(stateMachine.Args.ImagePath, "sbin"), 0755)
 	asserter.AssertErrNil(err, true)
-	_, err = os.Create(filepath.Join(stateMachine.tempDirs.chroot, "sbin", "start-stop-daemon"))
+	_, err = os.Create(filepath.Join(stateMachine.Args.ImagePath, "sbin", "start-stop-daemon"))
 	asserter.AssertErrNil(err, true)
 
 	// create an /sbin/initctl in the chroot
-	_, err = os.Create(filepath.Join(stateMachine.tempDirs.chroot, "sbin", "initctl"))
+	_, err = os.Create(filepath.Join(stateMachine.Args.ImagePath, "sbin", "initctl"))
 	asserter.AssertErrNil(err, true)
 
 	mockCmder := NewMockExecCommand()
@@ -3236,9 +3236,9 @@ func TestStateMachine_installPackages_fail(t *testing.T) {
 	t.Cleanup(func() { os.RemoveAll(stateMachine.stateMachineFlags.WorkDir) })
 
 	// create an /etc/resolv.conf in the chroot
-	err = os.MkdirAll(filepath.Join(stateMachine.tempDirs.chroot, "etc"), 0755)
+	err = os.MkdirAll(filepath.Join(stateMachine.Args.ImagePath, "etc"), 0755)
 	asserter.AssertErrNil(err, true)
-	_, err = os.Create(filepath.Join(stateMachine.tempDirs.chroot, "etc", "resolv.conf"))
+	_, err = os.Create(filepath.Join(stateMachine.Args.ImagePath, "etc", "resolv.conf"))
 	asserter.AssertErrNil(err, true)
 
 	osMkdirTemp = mockMkdirTemp
@@ -3260,7 +3260,7 @@ func TestStateMachine_installPackages_fail(t *testing.T) {
 	execCommand = exec.Command
 
 	// delete the backed up resolv.conf to trigger another backup
-	err = os.Remove(filepath.Join(stateMachine.tempDirs.chroot, "etc", "resolv.conf.tmp"))
+	err = os.Remove(filepath.Join(stateMachine.Args.ImagePath, "etc", "resolv.conf.tmp"))
 	asserter.AssertErrNil(err, true)
 	// mock helper.BackupAndCopyResolvConf
 	helperBackupAndCopyResolvConf = mockBackupAndCopyResolvConfFail
@@ -3423,10 +3423,10 @@ LABEL=system-boot	/boot/firmware	vfat	defaults	0	1
 			asserter.AssertErrNil(err, true)
 
 			// create the <chroot>/etc directory
-			err = os.MkdirAll(filepath.Join(stateMachine.tempDirs.chroot, "etc"), 0644)
+			err = os.MkdirAll(filepath.Join(stateMachine.Args.ImagePath, "etc"), 0644)
 			asserter.AssertErrNil(err, true)
 
-			fstabPath := filepath.Join(stateMachine.tempDirs.chroot, "etc", "fstab")
+			fstabPath := filepath.Join(stateMachine.Args.ImagePath, "etc", "fstab")
 
 			// simulate an already existing fstab file
 			if len(tc.existingFstab) != 0 {
@@ -3571,7 +3571,7 @@ func TestPreseedResetChroot(t *testing.T) {
 	// make sure the snaps from both prepares are present
 	expectedSnaps := []string{"lxd", "hello", "cedar"}
 	for _, expectedSnap := range expectedSnaps {
-		snapGlobs, err := filepath.Glob(filepath.Join(stateMachine.tempDirs.chroot,
+		snapGlobs, err := filepath.Glob(filepath.Join(stateMachine.Args.ImagePath,
 			"var", "lib", "snapd", "seed", "snaps", fmt.Sprintf("%s*.snap", expectedSnap)))
 		asserter.AssertErrNil(err, true)
 		if len(snapGlobs) == 0 {
@@ -3649,7 +3649,7 @@ func TestPreseedClassicImage(t *testing.T) {
 	// make sure the snaps are fully preseeded
 	expectedSnaps := []string{"lxc", "lxd", "hello"}
 	for _, expectedSnap := range expectedSnaps {
-		snapPath := filepath.Join(stateMachine.tempDirs.chroot, "snap", "bin", expectedSnap)
+		snapPath := filepath.Join(stateMachine.Args.ImagePath, "snap", "bin", expectedSnap)
 		_, err := os.Stat(snapPath)
 		if err != nil {
 			t.Errorf("File %s should be in chroot, but is missing", snapPath)
@@ -3742,7 +3742,7 @@ func TestStateMachine_defaultLocale(t *testing.T) {
 			t.Cleanup(func() { os.RemoveAll(stateMachine.stateMachineFlags.WorkDir) })
 
 			// create the <chroot>/etc/default directory
-			defaultPath := filepath.Join(stateMachine.tempDirs.chroot, "etc", "default")
+			defaultPath := filepath.Join(stateMachine.Args.ImagePath, "etc", "default")
 			err = os.MkdirAll(defaultPath, 0744)
 			asserter.AssertErrNil(err, true)
 
@@ -3852,19 +3852,19 @@ func TestClassicStateMachine_cleanRootfs_real_rootfs(t *testing.T) {
 
 	// Check cleaned files were removed
 	cleaned := []string{
-		filepath.Join(stateMachine.tempDirs.chroot, "var", "lib", "dbus", "machine-id"),
-		filepath.Join(stateMachine.tempDirs.chroot, "etc", "ssh", "ssh_host_rsa_key"),
-		filepath.Join(stateMachine.tempDirs.chroot, "etc", "ssh", "ssh_host_rsa_key.pub"),
-		filepath.Join(stateMachine.tempDirs.chroot, "etc", "ssh", "ssh_host_ecdsa_key"),
-		filepath.Join(stateMachine.tempDirs.chroot, "etc", "ssh", "ssh_host_ecdsa_key.pub"),
-		filepath.Join(stateMachine.tempDirs.chroot, "dev", "stderr"),
-		filepath.Join(stateMachine.tempDirs.chroot, "dev", "stdin"),
-		filepath.Join(stateMachine.tempDirs.chroot, "dev", "stdout"),
-		filepath.Join(stateMachine.tempDirs.chroot, "dev", "fd"),
-		filepath.Join(stateMachine.tempDirs.chroot, "sys", "kernel", "security"),
-		filepath.Join(stateMachine.tempDirs.chroot, "sys", "fs", "cgroup"),
-		filepath.Join(stateMachine.tempDirs.chroot, "run", "mount", "utab.lock"),
-		filepath.Join(stateMachine.tempDirs.chroot, "run", "lock"),
+		filepath.Join(stateMachine.Args.ImagePath, "var", "lib", "dbus", "machine-id"),
+		filepath.Join(stateMachine.Args.ImagePath, "etc", "ssh", "ssh_host_rsa_key"),
+		filepath.Join(stateMachine.Args.ImagePath, "etc", "ssh", "ssh_host_rsa_key.pub"),
+		filepath.Join(stateMachine.Args.ImagePath, "etc", "ssh", "ssh_host_ecdsa_key"),
+		filepath.Join(stateMachine.Args.ImagePath, "etc", "ssh", "ssh_host_ecdsa_key.pub"),
+		filepath.Join(stateMachine.Args.ImagePath, "dev", "stderr"),
+		filepath.Join(stateMachine.Args.ImagePath, "dev", "stdin"),
+		filepath.Join(stateMachine.Args.ImagePath, "dev", "stdout"),
+		filepath.Join(stateMachine.Args.ImagePath, "dev", "fd"),
+		filepath.Join(stateMachine.Args.ImagePath, "sys", "kernel", "security"),
+		filepath.Join(stateMachine.Args.ImagePath, "sys", "fs", "cgroup"),
+		filepath.Join(stateMachine.Args.ImagePath, "run", "mount", "utab.lock"),
+		filepath.Join(stateMachine.Args.ImagePath, "run", "lock"),
 	}
 	for _, file := range cleaned {
 		_, err := os.Stat(file)
@@ -3874,7 +3874,7 @@ func TestClassicStateMachine_cleanRootfs_real_rootfs(t *testing.T) {
 	}
 
 	truncated := []string{
-		filepath.Join(stateMachine.tempDirs.chroot, "etc", "machine-id"),
+		filepath.Join(stateMachine.Args.ImagePath, "etc", "machine-id"),
 	}
 	for _, file := range truncated {
 		fileInfo, err := os.Stat(file)
@@ -3998,7 +3998,7 @@ func TestClassicStateMachine_cleanRootfs(t *testing.T) {
 
 			for _, path := range tc.initialRootfsContent {
 				// create dir if necessary
-				fullPath := filepath.Join(stateMachine.tempDirs.chroot, path)
+				fullPath := filepath.Join(stateMachine.Args.ImagePath, path)
 				err = os.MkdirAll(filepath.Dir(fullPath), 0777)
 				asserter.AssertErrNil(err, true)
 
@@ -4012,7 +4012,7 @@ func TestClassicStateMachine_cleanRootfs(t *testing.T) {
 			}
 
 			for path, size := range tc.wantRootfsContent {
-				fullPath := filepath.Join(stateMachine.tempDirs.chroot, path)
+				fullPath := filepath.Join(stateMachine.Args.ImagePath, path)
 				s, err := os.Stat(fullPath)
 				if os.IsNotExist(err) {
 					t.Errorf("File %s should exist, but does not", path)

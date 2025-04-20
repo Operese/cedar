@@ -31,10 +31,6 @@ func (classicStateMachine *ClassicStateMachine) Setup() error {
 
 	classicStateMachine.states = make([]stateFunc, 0)
 
-	if err := classicStateMachine.setConfDefDir(classicStateMachine.parent.(*ClassicStateMachine).Args.SnapList); err != nil {
-		return err
-	}
-
 	// do the validation common to all image types
 	if err := classicStateMachine.validateInput(); err != nil {
 		return err
@@ -53,11 +49,6 @@ func (classicStateMachine *ClassicStateMachine) Setup() error {
 		return err
 	}
 
-	// if --resume was passed, figure out where to start
-	if err := classicStateMachine.readMetadata(metadataStateFile); err != nil {
-		return err
-	}
-
 	if err := classicStateMachine.SetSeries(); err != nil {
 		return err
 	}
@@ -67,12 +58,7 @@ func (classicStateMachine *ClassicStateMachine) Setup() error {
 	if classicStateMachine.commonFlags.DryRun {
 		return nil
 	}
-
-	if err := classicStateMachine.makeTemporaryDirectories(); err != nil {
-		return err
-	}
-
-	return classicStateMachine.determineOutputDirectory()
+	return nil
 }
 
 func (classicStateMachine *ClassicStateMachine) SetSeries() error {

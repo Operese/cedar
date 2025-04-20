@@ -16,21 +16,12 @@ import (
 var runCmd = helper.RunCmd
 var blockSize string = "1"
 
-var (
-	MKE2FS_CONFIG_ENV  = "MKE2FS_CONFIG"
-	MKE2FS_CONFIG_FILE = "mke2fs.conf"
-	MKE2FS_BASE_PATH   = "/etc/cedar/mkfs"
-)
-
 // validateInput ensures that command line flags for the state machine are valid. These
 // flags are applicable to all image types
 func (stateMachine *StateMachine) validateInput() error {
 	// Validate command line options
 	if stateMachine.stateMachineFlags.Thru != "" && stateMachine.stateMachineFlags.Until != "" {
 		return fmt.Errorf("cannot specify both --until and --thru")
-	}
-	if stateMachine.stateMachineFlags.WorkDir == "" && stateMachine.stateMachineFlags.Resume {
-		return fmt.Errorf("must specify workdir when using --resume flag")
 	}
 
 	logLevelFlags := []bool{stateMachine.commonFlags.Debug,
@@ -48,16 +39,6 @@ func (stateMachine *StateMachine) validateInput() error {
 	if logLevels > 1 {
 		return fmt.Errorf("--quiet, --verbose, and --debug flags are mutually exclusive")
 	}
-
-	return nil
-}
-
-func (stateMachine *StateMachine) setConfDefDir(confFileArg string) error {
-	path, err := filepath.Abs(filepath.Dir(confFileArg))
-	if err != nil {
-		return fmt.Errorf("unable to determine the configuration definition directory: %w", err)
-	}
-	stateMachine.ConfDefPath = path
 
 	return nil
 }
@@ -87,17 +68,6 @@ func (stateMachine *StateMachine) validateUntilThru() error {
 		}
 	}
 
-	return nil
-}
-
-// cleanup cleans the workdir. For now this is just deleting the temporary directory if necessary
-// but will have more functionality added to it later
-func (stateMachine *StateMachine) cleanup() error {
-	if stateMachine.cleanWorkDir {
-		if err := osRemoveAll(stateMachine.stateMachineFlags.WorkDir); err != nil {
-			return fmt.Errorf("Error cleaning up workDir: %s", err.Error())
-		}
-	}
 	return nil
 }
 

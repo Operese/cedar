@@ -61,7 +61,7 @@ func (stateMachine *StateMachine) prepareClassicImage() error {
 	// plug/slot sanitization needed by provider handling
 	snap.SanitizePlugsSlots = builtin.SanitizePlugsSlots
 
-	err = resetPreseeding(imageOpts, classicStateMachine.tempDirs.chroot, stateMachine.commonFlags.Debug, stateMachine.commonFlags.Verbose)
+	err = resetPreseeding(imageOpts, classicStateMachine.Args.ImagePath, stateMachine.commonFlags.Debug, stateMachine.commonFlags.Verbose)
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func (stateMachine *StateMachine) prepareClassicImage() error {
 
 	imageOpts.Classic = true
 	imageOpts.Architecture = classicStateMachine.ImageDef.Architecture
-	imageOpts.PrepareDir = classicStateMachine.tempDirs.chroot
+	imageOpts.PrepareDir = classicStateMachine.Args.ImagePath
 	imageOpts.Customizations = *new(image.Customizations)
 	imageOpts.Customizations.Validation = stateMachine.commonFlags.Validation
 
@@ -132,7 +132,7 @@ func resetPreseeding(imageOpts *image.Options, chroot string, debug, verbose boo
 	}
 	// We need to use the snap-preseed binary for the reset as well, as using
 	// preseed.ClassicReset() might leave us in a chroot jail
-	cmd := execCommand("/usr/lib/snapd/snap-preseed", "--reset", chroot)
+	cmd := execCommand(fmt.Sprintf("%s/usr/lib/snapd/snap-preseed", chroot), "--reset", chroot)
 	err = cmd.Run()
 	if err != nil {
 		return fmt.Errorf("Error resetting preseeding in the chroot. Error is \"%s\"", err.Error())
@@ -203,32 +203,32 @@ func (stateMachine *StateMachine) preseedClassicImage() (err error) {
 	mountPoints := []*mountPoint{
 		{
 			src:      "devtmpfs-build",
-			basePath: stateMachine.tempDirs.chroot,
+			basePath: classicStateMachine.Args.ImagePath,
 			relpath:  "/dev",
 			typ:      "devtmpfs",
 		},
 		{
 			src:      "devpts-build",
-			basePath: stateMachine.tempDirs.chroot,
+			basePath: classicStateMachine.Args.ImagePath,
 			relpath:  "/dev/pts",
 			typ:      "devpts",
 			opts:     []string{"nodev", "nosuid"},
 		},
 		{
 			src:      "proc-build",
-			basePath: stateMachine.tempDirs.chroot,
+			basePath: classicStateMachine.Args.ImagePath,
 			relpath:  "/proc",
 			typ:      "proc",
 		},
 		{
 			src:      "none",
-			basePath: stateMachine.tempDirs.chroot,
+			basePath: classicStateMachine.Args.ImagePath,
 			relpath:  "/sys/kernel/security",
 			typ:      "securityfs",
 		},
 		{
 			src:      "none",
-			basePath: stateMachine.tempDirs.chroot,
+			basePath: classicStateMachine.Args.ImagePath,
 			relpath:  "/sys/fs/cgroup",
 			typ:      "cgroup2",
 		},
@@ -236,7 +236,7 @@ func (stateMachine *StateMachine) preseedClassicImage() (err error) {
 
 	// Make sure we left the system as clean as possible if something has gone wrong
 	defer func() {
-		err = teardownMount(stateMachine.tempDirs.chroot, mountPoints, teardownCmds, err, stateMachine.commonFlags.Debug)
+		err = teardownMount(classicStateMachine.Args.ImagePath, mountPoints, teardownCmds, err, stateMachine.commonFlags.Debug)
 	}()
 
 	for _, mp := range mountPoints {
@@ -257,7 +257,7 @@ func (stateMachine *StateMachine) preseedClassicImage() (err error) {
 
 	preseedCmds = append(preseedCmds,
 		//nolint:gosec,G204
-		exec.Command("/usr/lib/snapd/snap-preseed", stateMachine.tempDirs.chroot),
+		exec.Command(fmt.Sprintf("%s/usr/lib/snapd/snap-preseed", classicStateMachine.Args.ImagePath), classicStateMachine.Args.ImagePath),
 	)
 
 	err = helper.RunCmds(preseedCmds, classicStateMachine.commonFlags.Debug)
@@ -274,7 +274,7 @@ var setDefaultLocaleState = stateFunc{"set_default_locale", (*StateMachine).setD
 func (stateMachine *StateMachine) setDefaultLocale() error {
 	classicStateMachine := stateMachine.parent.(*ClassicStateMachine)
 
-	defaultPath := filepath.Join(classicStateMachine.tempDirs.chroot, "etc", "default")
+	defaultPath := filepath.Join(classicStateMachine.Args.ImagePath, "etc", "default")
 	localePath := filepath.Join(defaultPath, "locale")
 	localeBytes, err := osReadFile(localePath)
 	if err == nil && localePresentRegex.Find(localeBytes) != nil {
@@ -298,15 +298,17 @@ var cleanRootfsState = stateFunc{"clean_rootfs", (*StateMachine).cleanRootfs}
 // cleanRootfs cleans the created chroot from secrets/values generated
 // during the various preceding install steps
 func (stateMachine *StateMachine) cleanRootfs() error {
+	classicStateMachine := stateMachine.parent.(*ClassicStateMachine)
+
 	toDelete := []string{
-		filepath.Join(stateMachine.tempDirs.chroot, "var", "lib", "dbus", "machine-id"),
+		filepath.Join(classicStateMachine.Args.ImagePath, "var", "lib", "dbus", "machine-id"),
 	}
 
 	toTruncate := []string{
-		filepath.Join(stateMachine.tempDirs.chroot, "etc", "machine-id"),
+		filepath.Join(classicStateMachine.Args.ImagePath, "etc", "machine-id"),
 	}
 
-	toCleanFromPattern, err := listWithPatterns(stateMachine.tempDirs.chroot,
+	toCleanFromPattern, err := listWithPatterns(classicStateMachine.Args.ImagePath,
 		[]string{
 			filepath.Join("etc", "ssh", "ssh_host_*_key.pub"),
 			filepath.Join("etc", "ssh", "ssh_host_*_key"),
@@ -327,7 +329,7 @@ func (stateMachine *StateMachine) cleanRootfs() error {
 		return err
 	}
 
-	toTruncateFromPattern, err := listWithPatterns(stateMachine.tempDirs.chroot,
+	toTruncateFromPattern, err := listWithPatterns(classicStateMachine.Args.ImagePath,
 		[]string{
 			// udev persistent rules
 			filepath.Join("etc", "udev", "rules.d", "*persistent-net.rules"),

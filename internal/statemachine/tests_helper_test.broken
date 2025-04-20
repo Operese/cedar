@@ -63,7 +63,7 @@ func (b *basicChrooter) init() error {
 	stateMachine.parent = &stateMachine
 	stateMachine.ImageDef = basicImageDef
 	path := filepath.Join("/tmp", "cedar-chroot-"+uuid.NewString())
-	stateMachine.tempDirs.chroot = path
+	stateMachine.Args.ImagePath = path
 
 	err := helper.SetDefaults(&stateMachine.ImageDef)
 	if err != nil {
@@ -105,7 +105,7 @@ func provideChroot(s StateMachine) error {
 	basicChroot.m.Lock()
 	defer basicChroot.m.Unlock()
 
-	return osutil.CopySpecialFile(basicChroot.path, s.tempDirs.chroot)
+	return osutil.CopySpecialFile(basicChroot.path, s.Args.ImagePath)
 }
 
 type mockRunCmd struct {
