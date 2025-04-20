@@ -13,7 +13,7 @@ import (
 	"github.com/snapcore/snapd/osutil"
 	"github.com/xeipuuv/gojsonschema"
 
-	"github.com/canonical/ubuntu-image/internal/testhelper"
+	"operese/cedar/internal/testhelper"
 )
 
 // define some mocked versions of go package functions

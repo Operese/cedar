@@ -9,8 +9,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/snapcore/snapd/osutil"
 
-	"github.com/canonical/ubuntu-image/internal/helper"
-	"github.com/canonical/ubuntu-image/internal/imagedefinition"
+	"operese/cedar/internal/helper"
+	"operese/cedar/internal/imagedefinition"
 )
 
 var basicImageDef = imagedefinition.ImageDefinition{

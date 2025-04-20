@@ -9,9 +9,9 @@ import (
 
 	"github.com/snapcore/snapd/osutil"
 
-	"github.com/canonical/ubuntu-image/internal/commands"
-	"github.com/canonical/ubuntu-image/internal/helper"
-	"github.com/canonical/ubuntu-image/internal/testhelper"
+	"operese/cedar/internal/commands"
+	"operese/cedar/internal/helper"
+	"operese/cedar/internal/testhelper"
 )
 
 func TestPack_Setup(t *testing.T) {

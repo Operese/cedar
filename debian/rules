@@ -2,7 +2,7 @@
 #export DH_VERBOSE = 1
 
 export DEB_BUILD_MAINT_OPTIONS = optimize=-lto
-export DH_GOPKG := github.com/canonical/ubuntu-image
+export DH_GOPKG := operese/cedar
 
 # strict symbols checking
 export DPKG_GENSYMBOLS_CHECK_LEVEL=4

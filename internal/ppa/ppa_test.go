@@ -11,8 +11,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"github.com/canonical/ubuntu-image/internal/helper"
-	"github.com/canonical/ubuntu-image/internal/imagedefinition"
+	"operese/cedar/internal/helper"
+	"operese/cedar/internal/imagedefinition"
 )
 
 var (

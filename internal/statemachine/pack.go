@@ -3,7 +3,7 @@ package statemachine
 import (
 	"fmt"
 
-	"github.com/canonical/ubuntu-image/internal/commands"
+	"operese/cedar/internal/commands"
 )
 
 var packStates = []stateFunc{

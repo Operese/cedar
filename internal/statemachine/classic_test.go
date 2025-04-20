@@ -26,9 +26,9 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 	"gopkg.in/yaml.v2"
 
-	"github.com/canonical/ubuntu-image/internal/helper"
-	"github.com/canonical/ubuntu-image/internal/imagedefinition"
-	"github.com/canonical/ubuntu-image/internal/testhelper"
+	"operese/cedar/internal/helper"
+	"operese/cedar/internal/imagedefinition"
+	"operese/cedar/internal/testhelper"
 )
 
 var yamlMarshal = yaml.Marshal

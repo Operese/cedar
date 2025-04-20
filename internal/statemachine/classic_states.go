@@ -21,9 +21,9 @@ import (
 	"github.com/snapcore/snapd/snap"
 	"github.com/snapcore/snapd/store"
 
-	"github.com/canonical/ubuntu-image/internal/helper"
-	"github.com/canonical/ubuntu-image/internal/imagedefinition"
-	"github.com/canonical/ubuntu-image/internal/ppa"
+	"operese/cedar/internal/helper"
+	"operese/cedar/internal/imagedefinition"
+	"operese/cedar/internal/ppa"
 )
 
 var (

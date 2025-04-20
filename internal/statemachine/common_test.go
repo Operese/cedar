@@ -23,8 +23,8 @@ import (
 	"github.com/snapcore/snapd/gadget/quantity"
 	"github.com/snapcore/snapd/osutil"
 
-	"github.com/canonical/ubuntu-image/internal/helper"
-	"github.com/canonical/ubuntu-image/internal/testhelper"
+	"operese/cedar/internal/helper"
+	"operese/cedar/internal/testhelper"
 )
 
 // TestLoadGadgetYaml tests a successful load of gadget.yaml. It also tests that the unpack

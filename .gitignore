@@ -1,6 +1,5 @@
 # Binary
 cmd/ubuntu-image/ubuntu-image
-ubuntu-image
 
 # Generated binaries and corresponding assets
 build/

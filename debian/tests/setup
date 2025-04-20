@@ -5,4 +5,4 @@ export GOFLAGS=-mod=readonly
 
 rm -rf /tmp/src/github.com/canonical/
 mkdir -p /tmp/src/github.com/canonical/
-cp -a . /tmp/src/github.com/canonical/ubuntu-image
+cp -a . /tmp/src/operese/cedar

@@ -6,7 +6,7 @@ import (
 
 	"github.com/snapcore/snapd/asserts"
 
-	"github.com/canonical/ubuntu-image/internal/commands"
+	"operese/cedar/internal/commands"
 )
 
 // snapStates are the names and function variables to be executed by the state machine for snap images

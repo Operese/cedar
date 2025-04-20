@@ -24,8 +24,8 @@ import (
 	"github.com/snapcore/snapd/seed"
 	"github.com/xeipuuv/gojsonschema"
 
-	"github.com/canonical/ubuntu-image/internal/commands"
-	"github.com/canonical/ubuntu-image/internal/helper"
+	"operese/cedar/internal/commands"
+	"operese/cedar/internal/helper"
 )
 
 const (

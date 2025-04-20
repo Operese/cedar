@@ -11,7 +11,7 @@ import (
 	"github.com/diskfs/go-diskfs/partition/mbr"
 	"github.com/snapcore/snapd/gadget"
 
-	"github.com/canonical/ubuntu-image/internal/helper"
+	"operese/cedar/internal/helper"
 )
 
 const (

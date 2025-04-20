@@ -9,7 +9,7 @@ import (
 	"github.com/snapcore/snapd/gadget"
 	"github.com/snapcore/snapd/gadget/quantity"
 
-	"github.com/canonical/ubuntu-image/internal/helper"
+	"operese/cedar/internal/helper"
 )
 
 // helper function to define *quantity.Offsets inline

@@ -20,9 +20,9 @@ import (
 	"github.com/snapcore/snapd/osutil/mkfs"
 	"github.com/snapcore/snapd/seed"
 
-	"github.com/canonical/ubuntu-image/internal/helper"
-	"github.com/canonical/ubuntu-image/internal/imagedefinition"
-	"github.com/canonical/ubuntu-image/internal/testhelper"
+	"operese/cedar/internal/helper"
+	"operese/cedar/internal/imagedefinition"
+	"operese/cedar/internal/testhelper"
 )
 
 // TestMaxOffset tests the functionality of the maxOffset function

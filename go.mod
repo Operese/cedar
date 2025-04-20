@@ -1,4 +1,4 @@
-module github.com/canonical/ubuntu-image
+module operese/cedar
 
 go 1.21
 

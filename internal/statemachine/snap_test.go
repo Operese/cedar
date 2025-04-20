@@ -19,9 +19,9 @@ import (
 	"github.com/snapcore/snapd/image"
 	"github.com/snapcore/snapd/store"
 
-	"github.com/canonical/ubuntu-image/internal/commands"
-	"github.com/canonical/ubuntu-image/internal/helper"
-	"github.com/canonical/ubuntu-image/internal/testhelper"
+	"operese/cedar/internal/commands"
+	"operese/cedar/internal/helper"
+	"operese/cedar/internal/testhelper"
 )
 
 // TestSnapStateMachine_Setup_Fail_setConfDefDir tests a failure in the Setup() function when setting the configuration definition directory

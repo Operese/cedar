@@ -10,8 +10,8 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 	"gopkg.in/yaml.v2"
 
-	"github.com/canonical/ubuntu-image/internal/commands"
-	"github.com/canonical/ubuntu-image/internal/imagedefinition"
+	"operese/cedar/internal/commands"
+	"operese/cedar/internal/imagedefinition"
 )
 
 var rootfsSeedStates = []stateFunc{

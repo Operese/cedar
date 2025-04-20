@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"github.com/canonical/ubuntu-image/internal/helper"
+	"operese/cedar/internal/helper"
 )
 
 func Test_getMountCmd(t *testing.T) {

@@ -21,8 +21,8 @@ import (
 	"github.com/snapcore/snapd/seed"
 	"github.com/snapcore/snapd/timings"
 
-	"github.com/canonical/ubuntu-image/internal/helper"
-	"github.com/canonical/ubuntu-image/internal/imagedefinition"
+	"operese/cedar/internal/helper"
+	"operese/cedar/internal/imagedefinition"
 )
 
 var runCmd = helper.RunCmd

@@ -7,7 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/xeipuuv/gojsonschema"
 
-	"github.com/canonical/ubuntu-image/internal/helper"
+	"operese/cedar/internal/helper"
 )
 
 func TestGeneratePocketList(t *testing.T) {

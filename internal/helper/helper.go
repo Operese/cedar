@@ -16,7 +16,7 @@ import (
 	"github.com/snapcore/snapd/osutil"
 	"github.com/xeipuuv/gojsonschema"
 
-	"github.com/canonical/ubuntu-image/internal/commands"
+	"operese/cedar/internal/commands"
 )
 
 // define some functions that can be mocked by test cases

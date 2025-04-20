@@ -13,8 +13,8 @@ import (
 	"github.com/snapcore/snapd/gadget/quantity"
 	"github.com/snapcore/snapd/osutil"
 
-	"github.com/canonical/ubuntu-image/internal/helper"
-	"github.com/canonical/ubuntu-image/internal/partition"
+	"operese/cedar/internal/helper"
+	"operese/cedar/internal/partition"
 )
 
 var setArtifactNamesState = stateFunc{"set_artifact_names", (*StateMachine).setArtifactNames}
