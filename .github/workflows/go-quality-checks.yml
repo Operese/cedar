@@ -1,0 +1,38 @@
+name: Go Quality Checks
+
+on: [pull_request]
+
+jobs:
+  check_quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: go-vet
+        run: go vet ./...
+
+      - name: go-fmt
+        run: FMT=`go fmt ./...` && [ -z "$FMT" ]
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        id: lint
+        with:
+          version: latest
+          args: '-c .github/.golangci.yml --out-format=colored-line-number'
+          skip-cache: true
+
+      - name: Print error message
+        if: always() && steps.lint.outcome == 'failure'
+        run: |
+          echo '
+          Linting failed. On your local machine, please run
+              golangci-lint run -c .github/.golangci.yml --fix
+          and check in the changes.'
+          exit 1

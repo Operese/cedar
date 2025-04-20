@@ -1,0 +1,35 @@
+Source: ubuntu-image
+Section: utils
+Priority: optional
+Maintainer: Lukasz 'sil2100' Zemczak <lukasz.zemczak@ubuntu.com>
+Build-Depends: debhelper (>= 11),
+               dh-golang (>= 1.17~),
+               fdisk,
+               gdisk,
+               golang-go (>= 2:1.21~),
+               livecd-rootfs,
+               mtools,
+               python3-docutils,
+               snapd,
+Standards-Version: 4.1.2
+Homepage: http://launchpad.net/ubuntu-image
+
+Package: ubuntu-image
+Architecture: any
+Built-Using: ${misc:Built-Using},
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         debootstrap,
+         eatmydata,
+         dosfstools,
+         fdisk,
+         gdisk,
+         germinate,
+         gpg,
+         mtools,
+         snapd,
+         squashfs-tools,
+Conflicts: python3-ubuntu-image
+Description: Toolkit for building Ubuntu images.
+ Ubuntu Image is the official tool for building various Ubuntu images according
+ to the provided specification - both core and classic.
