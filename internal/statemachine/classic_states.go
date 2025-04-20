@@ -166,7 +166,7 @@ func ensureSnapBasesInstalled(imageOpts *image.Options) error {
 // This should be done last to ensure the correct channels are being used
 func addExtraSnaps(imageOpts *image.Options, snapList *snaplist.SnapList) error {
 	imageOpts.SeedManifest = seedwriter.NewManifest()
-	for _, extraSnap := range snapList.ExtraSnaps {
+	for _, extraSnap := range snapList.Snaps {
 		if !helper.SliceHasElement(imageOpts.Snaps, extraSnap.SnapName) {
 			imageOpts.Snaps = append(imageOpts.Snaps, extraSnap.SnapName)
 		}
