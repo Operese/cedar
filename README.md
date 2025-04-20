@@ -1,3 +1,3 @@
 # Cedar
 
-A command-line utility to preseed an Ubuntu image with snaps.
+A command-line utility retrofitted from [ubuntu-image](https://github.com/Canonical/ubuntu-image.git) to preseed an Ubuntu OS tree with snaps.
