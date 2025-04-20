@@ -9,7 +9,7 @@ package snaplist
 type SnapList struct {
 	Architecture string  `yaml:"architecture"    json:"Architecture"`
 	Series       string  `yaml:"series"          json:"Series"`
-	Snaps        []*Snap `yaml:"snaps"    json:"Snaps"`
+	Snaps        []*Snap `yaml:"snaps"           json:"Snaps"`
 }
 
 // Snap contains information about snaps
