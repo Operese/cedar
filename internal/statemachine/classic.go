@@ -3,8 +3,6 @@ package statemachine
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/invopop/jsonschema"
 	"github.com/xeipuuv/gojsonschema"
@@ -91,20 +89,10 @@ func (stateMachine *StateMachine) parseSnapList() error {
 		return err
 	}
 
-	if snapList.Rootfs != nil && snapList.Rootfs.SourcesListDeb822 == nil {
-		fmt.Print("WARNING: rootfs.sources-list-deb822 was not set. Please explicitly set the format desired for sources list in your image definition.\n")
-	}
-
 	// populate the default values for snapList if they were not provided in
 	// the image definition YAML file
 	if err := helperSetDefaults(snapList); err != nil {
 		return err
-	}
-
-	if snapList.Rootfs != nil && *snapList.Rootfs.SourcesListDeb822 {
-		fmt.Print("WARNING: rootfs.sources-list-deb822 is set to true. The DEB822 format will be used to manage sources list. Please make sure you are not building an image older than noble.\n")
-	} else {
-		fmt.Print("WARNING: rootfs.sources-list-deb822 is set to false. The deprecated format will be used to manage sources list. Please if possible adopt the new format.\n")
 	}
 
 	err = validateSnapList(snapList)
@@ -121,7 +109,7 @@ func readSnapList(snapListPath string) (*snaplist.SnapList, error) {
 	snapList := &snaplist.SnapList{}
 	imageFile, err := os.Open(snapListPath)
 	if err != nil {
-		return nil, fmt.Errorf("Error opening image definition file: %s", err.Error())
+		return nil, fmt.Errorf("Error opening snap list file: %s", err.Error())
 	}
 	defer imageFile.Close()
 	if err := yaml.NewDecoder(imageFile).Decode(snapList); err != nil {
@@ -154,16 +142,6 @@ func validateSnapList(snapList *snaplist.SnapList) error {
 		return fmt.Errorf("Schema validation returned an error: %s", err.Error())
 	}
 
-	err = validateGadget(snapList, result)
-	if err != nil {
-		return err
-	}
-
-	err = validateCustomization(snapList, result)
-	if err != nil {
-		return err
-	}
-
 	// TODO: I've created a PR upstream in xeipuuv/gojsonschema
 	// https://github.com/xeipuuv/gojsonschema/pull/352
 	// if it gets merged this can be removed
@@ -177,139 +155,6 @@ func validateSnapList(snapList *snaplist.SnapList) error {
 	}
 
 	return nil
-}
-
-// validateGadget validates the Gadget section of the image definition
-func validateGadget(snapList *snaplist.SnapList, result *gojsonschema.Result) error {
-	// Do custom validation for gadgetURL being required if gadget is not pre-built
-	if snapList.Gadget != nil {
-		if snapList.Gadget.GadgetType != "prebuilt" && snapList.Gadget.GadgetURL == "" {
-			jsonContext := gojsonschema.NewJsonContext("gadget_validation", nil)
-			errDetail := gojsonschema.ErrorDetails{
-				"key":   "gadget:type",
-				"value": snapList.Gadget.GadgetType,
-			}
-			result.AddError(
-				snaplist.NewMissingURLError(
-					gojsonschema.NewJsonContext("missingURL", jsonContext),
-					52,
-					errDetail,
-				),
-				errDetail,
-			)
-		}
-	} else if snapList.Artifacts != nil {
-		diskUsed, err := helperCheckTags(snapList.Artifacts, "is_disk")
-		if err != nil {
-			return fmt.Errorf("Error checking struct tags for Artifacts: \"%s\"", err.Error())
-		}
-		if diskUsed != "" {
-			jsonContext := gojsonschema.NewJsonContext("image_without_gadget", nil)
-			errDetail := gojsonschema.ErrorDetails{
-				"key1": diskUsed,
-				"key2": "gadget:",
-			}
-			result.AddError(
-				snaplist.NewDependentKeyError(
-					gojsonschema.NewJsonContext("dependentKey", jsonContext),
-					52,
-					errDetail,
-				),
-				errDetail,
-			)
-		}
-	}
-
-	return nil
-}
-
-// validateCustomization validates the Customization section of the image definition
-func validateCustomization(snapList *snaplist.SnapList, result *gojsonschema.Result) error {
-	if snapList.Customization == nil {
-		return nil
-	}
-
-	validateExtraPPAs(snapList, result)
-	if snapList.Customization.Manual != nil {
-		jsonContext := gojsonschema.NewJsonContext("manual_path_validation", nil)
-		validateManualMakeDirs(snapList, result, jsonContext)
-		validateManualCopyFile(snapList, result, jsonContext)
-		validateManualTouchFile(snapList, result, jsonContext)
-	}
-
-	return nil
-}
-
-// validateExtraPPAs validates the Customization.ExtraPPAs section of the image definition
-func validateExtraPPAs(snapList *snaplist.SnapList, result *gojsonschema.Result) {
-	for _, p := range snapList.Customization.ExtraPPAs {
-		if p.Auth != "" && p.Fingerprint == "" {
-			jsonContext := gojsonschema.NewJsonContext("ppa_validation", nil)
-			errDetail := gojsonschema.ErrorDetails{
-				"ppaName": p.Name,
-			}
-			result.AddError(
-				snaplist.NewInvalidPPAError(
-					gojsonschema.NewJsonContext("missingPrivatePPAFingerprint",
-						jsonContext),
-					52,
-					errDetail,
-				),
-				errDetail,
-			)
-		}
-	}
-}
-
-// validateManualMakeDirs validates the Customization.Manual.MakeDirs section of the image definition
-func validateManualMakeDirs(snapList *snaplist.SnapList, result *gojsonschema.Result, jsonContext *gojsonschema.JsonContext) {
-	if snapList.Customization.Manual.MakeDirs == nil {
-		return
-	}
-	for _, mkdir := range snapList.Customization.Manual.MakeDirs {
-		validateAbsolutePath(mkdir.Path, "customization:manual:mkdir:destination", result, jsonContext)
-	}
-}
-
-// validateManualCopyFile validates the Customization.Manual.CopyFile section of the image definition
-func validateManualCopyFile(snapList *snaplist.SnapList, result *gojsonschema.Result, jsonContext *gojsonschema.JsonContext) {
-	if snapList.Customization.Manual.CopyFile == nil {
-		return
-	}
-	for _, copy := range snapList.Customization.Manual.CopyFile {
-		validateAbsolutePath(copy.Dest, "customization:manual:copy-file:destination", result, jsonContext)
-	}
-}
-
-// validateManualTouchFile validates the Customization.Manual.TouchFile section of the image definition
-func validateManualTouchFile(snapList *snaplist.SnapList, result *gojsonschema.Result, jsonContext *gojsonschema.JsonContext) {
-	if snapList.Customization.Manual.TouchFile == nil {
-		return
-	}
-	for _, touch := range snapList.Customization.Manual.TouchFile {
-		validateAbsolutePath(touch.TouchPath, "customization:manual:touch-file:path", result, jsonContext)
-	}
-}
-
-// validateAbsolutePath validates the
-func validateAbsolutePath(path string, errorKey string, result *gojsonschema.Result, jsonContext *gojsonschema.JsonContext) {
-	// XXX: filepath.IsAbs() does returns true for paths like ../../../something
-	// and those are NOT absolute paths.
-	if !filepath.IsAbs(path) || strings.Contains(path, "/../") {
-		errDetail := gojsonschema.ErrorDetails{
-			"key":   errorKey,
-			"value": path,
-		}
-		result.AddError(
-			snaplist.NewPathNotAbsoluteError(
-				gojsonschema.NewJsonContext("nonAbsoluteManualPath",
-					jsonContext),
-				52,
-				errDetail,
-			),
-			errDetail,
-		)
-	}
 }
 
 // calculateStates dynamically calculates all the states

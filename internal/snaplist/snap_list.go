@@ -14,18 +14,12 @@ import (
 // SnapList is the parent struct for the data
 // contained within a classic image definition file
 type SnapList struct {
-	ImageName      string         `yaml:"name"            json:"ImageName"`
-	DisplayName    string         `yaml:"display-name"    json:"DisplayName"`
-	Revision       int            `yaml:"revision"        json:"Revision,omitempty"`
-	Architecture   string         `yaml:"architecture"    json:"Architecture"`
-	Series         string         `yaml:"series"          json:"Series"`
-	Kernel         string         `yaml:"kernel"          json:"Kernel,omitempty"`
-	Gadget         *Gadget        `yaml:"gadget"          json:"Gadget,omitempty"`
-	ModelAssertion string         `yaml:"model-assertion" json:"ModelAssertion,omitempty" jsonschema:"type=string,format=uri"`
-	Rootfs         *Rootfs        `yaml:"rootfs"          json:"Rootfs"`
-	Customization  *Customization `yaml:"customization"   json:"Customization,omitempty"`
-	Artifacts      *Artifact      `yaml:"artifacts"       json:"Artifacts,omitempty"`
-	Class          string         `yaml:"class"           json:"Class"                    jsonschema:"enum=preinstalled,enum=cloud,enum=installer"`
+	ImageName    string  `yaml:"name"            json:"ImageName"`
+	DisplayName  string  `yaml:"display-name"    json:"DisplayName"`
+	Revision     int     `yaml:"revision"        json:"Revision,omitempty"`
+	Architecture string  `yaml:"architecture"    json:"Architecture"`
+	Series       string  `yaml:"series"          json:"Series"`
+	ExtraSnaps   []*Snap `yaml:"extra-snaps"    json:"ExtraSnaps,omitempty"`
 }
 
 // Gadget defines the gadget section of the image definition file
@@ -308,13 +302,6 @@ type DependentKeyError struct {
 	gojsonschema.ResultErrorFields
 }
 
-func (i SnapList) securityMirror() string {
-	if i.Architecture == "amd64" || i.Architecture == "i386" {
-		return "http://security.ubuntu.com/ubuntu/"
-	}
-	return i.Rootfs.Mirror
-}
-
 // List of valid pockets
 const (
 	RELEASE_POCKET  = "release"
@@ -354,34 +341,6 @@ func generateLegacySourcesList(series string, components []string, mirror string
 	}
 
 	return strings.Join(sourcesList, "\n") + "\n"
-}
-
-// LegacyBuildSourcesList returns the content of the /etc/apt/sources.list to be used
-// during the build process
-func (i *SnapList) LegacyBuildSourcesList() string {
-	return i.legacySourcesList(false)
-}
-
-// LegacyTargetSourcesList returns the content of the /etc/apt/sources.list for the target
-// image
-func (i *SnapList) LegacyTargetSourcesList() string {
-	return i.legacySourcesList(true)
-}
-
-// legacySourcesList returns the content of the /etc/apt/sources.list file in the
-// legacy format (not deb822).
-func (i *SnapList) legacySourcesList(target bool) string {
-	pocket := i.Rootfs.Pocket
-	if target {
-		pocket = i.Customization.Pocket
-	}
-
-	return generateLegacySourcesList(
-		i.Series,
-		i.Customization.Components,
-		i.Rootfs.Mirror,
-		i.securityMirror(),
-		strings.ToLower(pocket))
 }
 
 // generateDeb822Section returns a deb822 section/paragraph to be used in a sources list file
@@ -457,42 +416,3 @@ var ubuntuSourceHeader = `## Ubuntu distribution repository
 var ubuntuSourceSecurityHeader = `## Ubuntu security updates. Aside from URIs and Suites,
 ## this should mirror your choices in the previous section.
 `
-
-// deb822SourcesList returns the content of /etc/apt/sources.list.d/ubuntu.sources
-// to be used during the build process
-func (i *SnapList) Deb822BuildSourcesList() string {
-	return i.deb822SourcesList(false)
-}
-
-// deb822SourcesList returns the content of /etc/apt/sources.list.d/ubuntu.sources
-// for the target image
-func (i *SnapList) Deb822TargetSourcesList() string {
-	return i.deb822SourcesList(true)
-}
-
-// deb822SourcesList returns the content of /etc/apt/sources.list.d/ubuntu.sources
-// in the deb822 format.
-// The target param defines if the generated sources list will be used in the target image.
-func (i *SnapList) deb822SourcesList(target bool) string {
-	pocket := i.Rootfs.Pocket
-	if target {
-		pocket = i.Customization.Pocket
-	}
-	pocket = strings.ToLower(pocket)
-
-	ubuntuSources := ubuntuSourceHeader + generateDeb822Section(
-		i.Rootfs.Mirror,
-		i.Series,
-		i.Rootfs.Components,
-		pocket,
-	)
-
-	ubuntuSources += ubuntuSourceSecurityHeader + generateDeb822Section(
-		i.securityMirror(),
-		i.Series,
-		i.Rootfs.Components,
-		SECURITY_POCKET,
-	)
-
-	return ubuntuSources
-}

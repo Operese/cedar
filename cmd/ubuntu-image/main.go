@@ -36,10 +36,10 @@ Other than -w, these options are mutually exclusive. When -u or -t is given,
 the state machine can be resumed later with -r, but -w must be given in that
 case since the state is saved in a ubuntu-image.json file in the working directory.`
 
-func initStateMachine(commonOpts *commands.CommonOpts, stateMachineOpts *commands.StateMachineOpts, ubuntuImageCommand *commands.UbuntuImageCommand) (statemachine.SmInterface, error) {
+func initStateMachine(commonOpts *commands.CommonOpts, stateMachineOpts *commands.StateMachineOpts, classicCommand *commands.ClassicCommand) (statemachine.SmInterface, error) {
 	var stateMachine statemachine.SmInterface
 	stateMachine = &statemachine.ClassicStateMachine{
-		Args: ubuntuImageCommand.Classic.ClassicArgsPassed,
+		Args: classicCommand.ClassicArgsPassed,
 	}
 
 	stateMachine.SetCommonOpts(commonOpts, stateMachineOpts)
@@ -105,10 +105,10 @@ func parseFlags(parser *flags.Parser, restoreStdout, restoreStderr func(), stdou
 func main() { //nolint: gocyclo
 	commonOpts := new(commands.CommonOpts)
 	stateMachineOpts := new(commands.StateMachineOpts)
-	ubuntuImageCommand := new(commands.UbuntuImageCommand)
+	classicCommand := new(commands.ClassicCommand)
 
 	// set up the go-flags parser for command line options
-	parser := flags.NewParser(ubuntuImageCommand, flags.Default)
+	parser := flags.NewParser(classicCommand, flags.Default)
 	_, err := parser.AddGroup("State Machine Options", stateMachineLongDesc, stateMachineOpts)
 	if err != nil {
 		fmt.Printf("Error: %s\n", err.Error())
@@ -163,7 +163,7 @@ func main() { //nolint: gocyclo
 	}
 
 	// init the state machine
-	sm, err := initStateMachine(commonOpts, stateMachineOpts, ubuntuImageCommand)
+	sm, err := initStateMachine(commonOpts, stateMachineOpts, classicCommand)
 	if err != nil {
 		fmt.Printf("Error: %s\n", err.Error())
 		osExit(1)

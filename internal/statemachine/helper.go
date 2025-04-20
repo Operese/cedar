@@ -528,67 +528,6 @@ func parseSnapsAndChannels(snaps []string) (snapNames []string, snapChannels map
 	return snapNames, snapChannels, nil
 }
 
-// generateGerminateCmd creates the appropriate germinate command for the
-// values configured in the image definition yaml file
-func generateGerminateCmd(snapList snaplist.SnapList) *exec.Cmd {
-	// determine the value for the seed-dist in the form of <archive>.<series>
-	seedDist := snapList.Rootfs.Flavor
-	if snapList.Rootfs.Seed.SeedBranch != "" {
-		seedDist = seedDist + "." + snapList.Rootfs.Seed.SeedBranch
-	}
-
-	seedSource := strings.Join(snapList.Rootfs.Seed.SeedURLs, ",")
-
-	germinateCmd := execCommand(
-		"germinate",
-		"--mirror", snapList.Rootfs.Mirror,
-		"--arch", snapList.Architecture,
-		"--dist", snapList.Series,
-		"--seed-source", seedSource,
-		"--seed-dist", seedDist,
-		"--no-rdepends",
-	)
-
-	if *snapList.Rootfs.Seed.Vcs {
-		germinateCmd.Args = append(germinateCmd.Args, "--vcs=auto")
-	}
-
-	if len(snapList.Rootfs.Components) > 0 {
-		components := strings.Join(snapList.Rootfs.Components, ",")
-		germinateCmd.Args = append(germinateCmd.Args, "--components="+components)
-	}
-
-	return germinateCmd
-}
-
-// generateDebootstrapCmd generates the debootstrap command used to create a chroot
-// environment that will eventually become the rootfs of the resulting image
-func generateDebootstrapCmd(snapList snaplist.SnapList, targetDir string) *exec.Cmd {
-	debootstrapCmd := execCommand("debootstrap",
-		"--arch", snapList.Architecture,
-		"--variant=minbase",
-	)
-
-	if snapList.Customization != nil && len(snapList.Customization.ExtraPPAs) > 0 {
-		// ca-certificates is needed to use PPAs
-		debootstrapCmd.Args = append(debootstrapCmd.Args, "--include=ca-certificates")
-	}
-
-	if len(snapList.Rootfs.Components) > 0 {
-		components := strings.Join(snapList.Rootfs.Components, ",")
-		debootstrapCmd.Args = append(debootstrapCmd.Args, "--components="+components)
-	}
-
-	// add the SUITE TARGET and MIRROR arguments
-	debootstrapCmd.Args = append(debootstrapCmd.Args, []string{
-		snapList.Series,
-		targetDir,
-		snapList.Rootfs.Mirror,
-	}...)
-
-	return debootstrapCmd
-}
-
 // generateAptCmd generates the apt command used to create a chroot
 // environment that will eventually become the rootfs of the resulting image
 func generateAptCmds(targetDir string, packageList []string) []*exec.Cmd {

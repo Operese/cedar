@@ -26,10 +26,3 @@ type StateMachineOpts struct {
 	Thru    string `short:"t" long:"thru" description:"Run the state machine through the given STEP, inclusively. STEP must be the name of the step." value-name:"STEP" default:""`
 	Resume  bool   `short:"r" long:"resume" description:"Continue the state machine from the previously saved state. It is an error if there is no previous state."`
 }
-
-// UbuntuImageCommand is needed for the parser to store positional arguments and flags
-type UbuntuImageCommand struct {
-	Snap    SnapCommand    `command:"snap"`
-	Classic ClassicCommand `command:"classic"`
-	Pack    PackCommand    `command:"pack" hidden:"true"`
-}
