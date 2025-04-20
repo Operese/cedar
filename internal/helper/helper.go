@@ -375,63 +375,6 @@ func SafeQuantitySubtraction(orig, subtract quantity.Size) quantity.Size {
 	return orig - subtract
 }
 
-// CreateTarArchive places all of the files from a source directory into a tar.
-// Currently supported are uncompressed tar archives and the following
-// compression types: gzip, xz bzip2, zstd
-func CreateTarArchive(src, dest, compression string, debug bool) error {
-	tarCommand := exec.Command(
-		"tar",
-		"--directory",
-		src,
-		"--xattrs",
-		"--xattrs-include=*",
-		"--sparse",
-		"--create",
-		"--file",
-		dest,
-		".",
-	)
-	if debug {
-		tarCommand.Args = append(tarCommand.Args, "--verbose")
-	}
-	// set up any compression arguments
-	switch compression {
-	case "uncompressed":
-		break
-	case "bzip2":
-		tarCommand.Args = append(tarCommand.Args, "--bzip2")
-	case "gzip":
-		tarCommand.Args = append(tarCommand.Args, "--gzip")
-	case "xz":
-		tarCommand.Args = append(tarCommand.Args, "--xz")
-	case "zstd":
-		tarCommand.Args = append(tarCommand.Args, "--zstd")
-	default:
-		return fmt.Errorf("Unknown compression type: \"%s\"", compression)
-	}
-	return RunCmd(tarCommand, debug)
-}
-
-// ExtractTarArchive extracts all the files from a tar. Currently supported are
-// uncompressed tar archives and the following compression types: zip, gzip, xz
-// bzip2, zstd
-func ExtractTarArchive(src, dest string, debug bool) error {
-	tarCommand := exec.Command(
-		"tar",
-		"--xattrs",
-		"--xattrs-include=*",
-		"--extract",
-		"--file",
-		src,
-		"--directory",
-		dest,
-	)
-	if debug {
-		tarCommand.Args = append(tarCommand.Args, "--verbose")
-	}
-	return RunCmd(tarCommand, debug)
-}
-
 // CalculateSHA256 calculates the SHA256 sum of the file provided as an argument
 func CalculateSHA256(fileName string) (string, error) {
 	f, err := os.Open(fileName)

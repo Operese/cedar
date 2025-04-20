@@ -13,7 +13,6 @@ import (
 	"operese/cedar/internal/helper"
 )
 
-var runCmd = helper.RunCmd
 var blockSize string = "1"
 
 // validateInput ensures that command line flags for the state machine are valid. These
