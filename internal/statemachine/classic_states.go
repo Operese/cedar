@@ -50,6 +50,8 @@ func (stateMachine *StateMachine) prepareClassicImage() error {
 	imageOpts := &image.Options{}
 	var err error
 
+	classicStateMachine.Snaps = addUniqueSnaps(classicStateMachine.Snaps, []string{"core"})
+
 	imageOpts.Snaps, imageOpts.SnapChannels, err = parseSnapsAndChannels(classicStateMachine.Snaps)
 	if err != nil {
 		return err
