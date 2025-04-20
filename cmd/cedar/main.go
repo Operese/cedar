@@ -36,10 +36,11 @@ Other than -w, these options are mutually exclusive. When -u or -t is given,
 the state machine can be resumed later with -r, but -w must be given in that
 case since the state is saved in a cedar.json file in the working directory.`
 
-func initStateMachine(commonOpts *commands.CommonOpts, stateMachineOpts *commands.StateMachineOpts, classicCommand *commands.ClassicCommand) (statemachine.SmInterface, error) {
+func initStateMachine(commonOpts *commands.CommonOpts, stateMachineOpts *commands.StateMachineOpts, classicCommand *commands.ClassicCommand, cedarOpts *commands.ClassicOpts) (statemachine.SmInterface, error) {
 	var stateMachine statemachine.SmInterface
 	stateMachine = &statemachine.ClassicStateMachine{
-		Args: classicCommand.ClassicArgsPassed,
+		Args:    classicCommand.ClassicArgsPassed,
+		Preseed: cedarOpts.Preseed,
 	}
 
 	stateMachine.SetCommonOpts(commonOpts, stateMachineOpts)
@@ -104,6 +105,7 @@ func parseFlags(parser *flags.Parser, restoreStdout, restoreStderr func(), stdou
 func main() { //nolint: gocyclo
 	commonOpts := new(commands.CommonOpts)
 	stateMachineOpts := new(commands.StateMachineOpts)
+	cedarOpts := new(commands.ClassicOpts)
 	classicCommand := new(commands.ClassicCommand)
 
 	// set up the go-flags parser for command line options
@@ -115,6 +117,13 @@ func main() { //nolint: gocyclo
 		return
 	}
 	_, err = parser.AddGroup("Common Options", "Options common to every command", commonOpts)
+	if err != nil {
+		fmt.Printf("Error: %s\n", err.Error())
+		osExit(1)
+		return
+	}
+
+	_, err = parser.AddGroup("Cedar Options", "Options determining which Cedar stages will be executed.", cedarOpts)
 	if err != nil {
 		fmt.Printf("Error: %s\n", err.Error())
 		osExit(1)
@@ -162,7 +171,7 @@ func main() { //nolint: gocyclo
 	}
 
 	// init the state machine
-	sm, err := initStateMachine(commonOpts, stateMachineOpts, classicCommand)
+	sm, err := initStateMachine(commonOpts, stateMachineOpts, classicCommand, cedarOpts)
 	if err != nil {
 		fmt.Printf("Error: %s\n", err.Error())
 		osExit(1)

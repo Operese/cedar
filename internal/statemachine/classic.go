@@ -12,16 +12,12 @@ import (
 	"operese/cedar/internal/snaplist"
 )
 
-var snapSeedStates = []stateFunc{
-	prepareClassicImageState,
-	preseedClassicImageState,
-}
-
 // ClassicStateMachine embeds StateMachine and adds the command line flags specific to classic images
 type ClassicStateMachine struct {
 	StateMachine
 	ImageDef snaplist.SnapList
 	Args     commands.ClassicArgs
+	Preseed  bool
 }
 
 // Setup assigns variables and calls other functions that must be executed before Run()
@@ -149,7 +145,12 @@ func validateSnapList(snapList *snaplist.SnapList) error {
 // If a new possible state is added to the classic build state machine, it
 // should be added here (usually basing on contents of the image definition)
 func (s *StateMachine) calculateStates() error {
-	s.states = append(s.states, snapSeedStates...)
+	classicStateMachine := s.parent.(*ClassicStateMachine)
+
+	s.states = append(s.states, prepareClassicImageState)
+	if classicStateMachine.Preseed {
+		s.states = append(s.states, preseedClassicImageState)
+	}
 
 	return nil
 }
