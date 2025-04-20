@@ -683,7 +683,7 @@ func TestClassicStateMachine_DryRun(t *testing.T) {
 	restoreCWD := testhelper.SaveCWD()
 	defer restoreCWD()
 
-	workDir := "ubuntu-image-test-dry-run"
+	workDir := "cedar-test-dry-run"
 	err := os.Mkdir(workDir, 0755)
 	asserter.AssertErrNil(err, true)
 
@@ -1705,7 +1705,7 @@ func TestClassicSnapRevisions(t *testing.T) {
 					SnapRevision: 38,
 				},
 				{
-					SnapName:     "ubuntu-image",
+					SnapName:     "cedar",
 					SnapRevision: 330,
 				},
 				{
@@ -2198,7 +2198,7 @@ func TestGeneratePackageManifest(t *testing.T) {
 		execCommand = exec.Command
 	})
 	// We need the output directory set for this
-	outputDir, err := os.MkdirTemp("/tmp", "ubuntu-image-")
+	outputDir, err := os.MkdirTemp("/tmp", "cedar-")
 	asserter.AssertErrNil(err, true)
 	t.Cleanup(func() { os.RemoveAll(outputDir) })
 
@@ -2261,7 +2261,7 @@ func TestFailedGeneratePackageManifest(t *testing.T) {
 	}
 
 	// We need the output directory set for this
-	outputDir, err := os.MkdirTemp("/tmp", "ubuntu-image-")
+	outputDir, err := os.MkdirTemp("/tmp", "cedar-")
 	asserter.AssertErrNil(err, true)
 	t.Cleanup(func() { os.RemoveAll(outputDir) })
 	stateMachine.commonFlags.OutputDir = outputDir
@@ -2304,7 +2304,7 @@ func TestGenerateFilelist(t *testing.T) {
 		execCommand = exec.Command
 	})
 	// We need the output directory set for this
-	outputDir, err := os.MkdirTemp("/tmp", "ubuntu-image-")
+	outputDir, err := os.MkdirTemp("/tmp", "cedar-")
 	asserter.AssertErrNil(err, true)
 	t.Cleanup(func() { os.RemoveAll(outputDir) })
 
@@ -2373,7 +2373,7 @@ func TestFailedGenerateFilelist(t *testing.T) {
 	}
 
 	// We need the output directory set for this
-	outputDir, err := os.MkdirTemp("/tmp", "ubuntu-image-")
+	outputDir, err := os.MkdirTemp("/tmp", "cedar-")
 	asserter.AssertErrNil(err, true)
 	t.Cleanup(func() { os.RemoveAll(outputDir) })
 	stateMachine.commonFlags.OutputDir = outputDir
@@ -2418,7 +2418,7 @@ func TestSuccessfulClassicRun(t *testing.T) {
 	t.Cleanup(restoreCWD)
 
 	// We need the output directory set for this
-	outputDir, err := os.MkdirTemp("/tmp", "ubuntu-image-")
+	outputDir, err := os.MkdirTemp("/tmp", "cedar-")
 	asserter.AssertErrNil(err, true)
 	t.Cleanup(func() { os.RemoveAll(outputDir) })
 
@@ -2550,8 +2550,8 @@ func TestSuccessfulClassicRun(t *testing.T) {
 func testHelperCheckPPAInstalled(t *testing.T, asserter *helper.Asserter, chroot string) {
 	t.Helper()
 	files := []string{
-		filepath.Join(chroot, "usr", "bin", "hello-ubuntu-image-public"),
-		filepath.Join(chroot, "usr", "bin", "hello-ubuntu-image-private"),
+		filepath.Join(chroot, "usr", "bin", "hello-cedar-public"),
+		filepath.Join(chroot, "usr", "bin", "hello-cedar-private"),
 	}
 	for _, file := range files {
 		_, err := os.Stat(file)
@@ -2783,7 +2783,7 @@ func TestSuccessfulClassicRunNoArtifact(t *testing.T) {
 	t.Cleanup(restoreCWD)
 
 	// We need the output directory set for this
-	outputDir, err := os.MkdirTemp("/tmp", "ubuntu-image-")
+	outputDir, err := os.MkdirTemp("/tmp", "cedar-")
 	asserter.AssertErrNil(err, true)
 	t.Cleanup(func() { os.RemoveAll(outputDir) })
 
@@ -2825,7 +2825,7 @@ func TestSuccessfulRootfsGeneration(t *testing.T) {
 	t.Cleanup(restoreCWD)
 
 	// We need the output directory set for this
-	outputDir, err := os.MkdirTemp("/tmp", "ubuntu-image-")
+	outputDir, err := os.MkdirTemp("/tmp", "cedar-")
 	asserter.AssertErrNil(err, true)
 	t.Cleanup(func() { os.RemoveAll(outputDir) })
 
@@ -3558,7 +3558,7 @@ func TestPreseedResetChroot(t *testing.T) {
 		Customization: &snaplist.Customization{
 			ExtraSnaps: []*snaplist.Snap{
 				{
-					SnapName: "ubuntu-image",
+					SnapName: "cedar",
 				},
 			},
 		},
@@ -3569,7 +3569,7 @@ func TestPreseedResetChroot(t *testing.T) {
 	asserter.AssertErrNil(err, true)
 
 	// make sure the snaps from both prepares are present
-	expectedSnaps := []string{"lxd", "hello", "ubuntu-image"}
+	expectedSnaps := []string{"lxd", "hello", "cedar"}
 	for _, expectedSnap := range expectedSnaps {
 		snapGlobs, err := filepath.Glob(filepath.Join(stateMachine.tempDirs.chroot,
 			"var", "lib", "snapd", "seed", "snaps", fmt.Sprintf("%s*.snap", expectedSnap)))

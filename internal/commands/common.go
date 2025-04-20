@@ -8,7 +8,7 @@ type CommonOpts struct {
 	Verbose    bool   `short:"v" long:"verbose" description:"Enable verbose output"`
 	Quiet      bool   `short:"q" long:"quiet" description:"Turn off all output"`
 	OutputDir  string `short:"O" long:"output-dir" description:"The directory in which to put generated disk image files. For snap builds, the disk image files themselves will be named <volume>.img inside this directory, where <volume> is the volume name taken from the gadget.yaml file. For classic builds, the disk image files themselves will be named based on the image definition inside this directory. The output dir will default to the value of --workdir if --workdir is specified and --output-dir is not. If neither --output-dir or --workdir is used, the images will be placed in the current working directory." value-name:"DIRECTORY"`
-	Version    bool   `long:"version" description:"Print the version number of ubuntu-image and exit"`
+	Version    bool   `long:"version" description:"Print the version number of cedar and exit"`
 	Channel    string `short:"c" long:"channel" description:"The default snap channel to use" value-name:"CHANNEL"`
 	Validation string `long:"validation" description:"Control whether validations should be ignored or enforced" choice:"ignore" choice:"enforce"` //nolint:staticcheck,SA5008
 	// The library we use to handle command-line flags (github.com/jessevdk/go-flags) relies on this method to list valid values for a flag, even though this is not a recommended way.

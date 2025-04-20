@@ -715,7 +715,7 @@ parts:
     - core=12725
     - snapcraft=7010
     - snapd=14978
-    - ubuntu-image=214
+    - cedar=214
     override-build: "set -x\n# unconditionally set the arch-triplet since this snapcraft.yaml
       will \n# always be used to produce an armhf snap\nBUILD_ARCH_TRIPLET=aarch64-linux-gnu\n#
       but only use the cross-compiling sources when actually cross compiling\n# as
@@ -1440,7 +1440,7 @@ parts:
     - core=12725
     - snapcraft=7010
     - snapd=14978
-    - ubuntu-image=214
+    - cedar=214
     override-build: "set -x\nif [ \"x86_64-linux-gnu\" = \"x86_64-linux-gnu\" ] ||
       [ -z \"x86_64-linux-gnu\" ]; then\n  # manually set since new snapcraft doesn't
       like --target-arch when \n  # building with lxd/multipass\n  BUILD_ARCH_TRIPLET=aarch64-linux-gnu\nelse\n
@@ -2160,7 +2160,7 @@ parts:
     - core=12725
     - snapcraft=7010
     - snapd=14978
-    - ubuntu-image=214
+    - cedar=214
     plugin: dump
     prime:
     - -*

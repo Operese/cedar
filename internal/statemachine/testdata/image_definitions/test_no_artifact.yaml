@@ -59,14 +59,14 @@ customization:
       name: core20
   extra-ppas:
     -
-      name: "canonical-foundations/ubuntu-image"
+      name: "canonical-foundations/cedar"
       fingerprint: "CDE5112BD4104F975FC8A53FD4C0B668FD4C9139"
     -
-      name: "canonical-foundations/ubuntu-image-private-test"
+      name: "canonical-foundations/cedar-private-test"
       auth: "sil2100:vVg74j6SM8WVltwpxDRJ"
       fingerprint: "CDE5112BD4104F975FC8A53FD4C0B668FD4C9139"
   extra-packages:
     -
-      name: "hello-ubuntu-image-public"
+      name: "hello-cedar-public"
     -
-      name: "hello-ubuntu-image-private"
+      name: "hello-cedar-private"

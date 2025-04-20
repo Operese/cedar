@@ -2,7 +2,7 @@
 Image Definition
 ================
 
-The image definition is a YAML file that is consumed by ``ubuntu-image``
+The image definition is a YAML file that is consumed by ``cedar``
 that specifies how to build a classic image.
 
 The following specification defines what is supported in the YAML:
@@ -43,7 +43,7 @@ The following specification defines what is supported in the YAML:
       # The type of gadget tree source. Currently supported values
       # are git, directory, and prebuilt. When git is used the url
       # will be cloned and `make` will be run. When directory is
-      # used, ubuntu-image will change directories into the specified
+      # used, cedar will change directories into the specified
       # URL and run `make`. When prebuilt is used, the contents of the
       # URL are simply copied to the gadget directory.
       type: git | directory | prebuilt
@@ -132,7 +132,7 @@ The following specification defines what is supported in the YAML:
         # SHA256 sum of the tarball used to verify it has not
         # been altered.
         sha256sum: <string> (optional)
-    # ubuntu-image supports building automatically with some
+    # cedar supports building automatically with some
     # customizations to the image. Note that if customization
     # is specified, at least one of the subkeys should be used
     # This is only supported for classic image building 
@@ -219,7 +219,7 @@ The following specification defines what is supported in the YAML:
           # and updates will come from the channel specified
           revision: <int> (optional)
       # After the rootfs has been created and before the image
-      # artifacts are generated, ubuntu-image can automatically
+      # artifacts are generated, cedar can automatically
       # perform some manual customization to the rootfs.
       manual: (optional)
         # Create directories in the rootfs of the image
@@ -298,7 +298,7 @@ The following specification defines what is supported in the YAML:
     # manifest files, changelogs, and a list of files in the rootfs.
     # If this is not set, only the rootfs will be created.
     artifacts: (optional)
-      # Used to specify that ubuntu-image should create a .img file.
+      # Used to specify that cedar should create a .img file.
       img: (optional)
         -
           # Name to output the .img file.
@@ -306,7 +306,7 @@ The following specification defines what is supported in the YAML:
           # Volume from the gadget from which to create the image
           volume: <string> (optional for single volume gadgets,
                             required for multi-volume gadgets)
-      # Used to specify that ubuntu-image should create a .iso file.
+      # Used to specify that cedar should create a .iso file.
       # Not yet supported.
       iso: (optional)
         -
@@ -316,10 +316,10 @@ The following specification defines what is supported in the YAML:
           volume: <string> (optional for single volume gadgets,
                             required for multi-volume gadgets)
           # Specify parameters to use when calling `xorriso`. When not
-          # provided, ubuntu-image will attempt to create it's own
+          # provided, cedar will attempt to create it's own
           # `xorriso` command.
           xorriso-command: <string> (optional)
-      # Used to specify that ubuntu-image should create a .qcow2 file.
+      # Used to specify that cedar should create a .qcow2 file.
       # If a .img file is specified for the corresponding volume, the
       # existing .img will be re-used and converted into a qcow2 image.
       # Otherwise, a new raw image will be created and then converted
@@ -343,7 +343,7 @@ The following specification defines what is supported in the YAML:
       # Not yet supported.
       changelog:
         name: <string>
-      # A tarball of the rootfs that has been built by ubuntu-image.
+      # A tarball of the rootfs that has been built by cedar.
       rootfs-tarball:
         # Name to output the tar archive.
         name: <string>

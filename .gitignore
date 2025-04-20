@@ -1,5 +1,5 @@
 # Binary
-cmd/ubuntu-image/ubuntu-image
+cmd/cedar/cedar
 
 # Generated binaries and corresponding assets
 build/
@@ -17,13 +17,13 @@ coverage.txt
 
 # Packaging artefacts
 debian/*debhelper*
-debian/ubuntu-image.substvars
+debian/cedar.substvars
 debian/files
 obj-*
 vendor/
 
 # snap
-ubuntu-image*.snap
+cedar*.snap
 
 # Work dirs
 tmp/

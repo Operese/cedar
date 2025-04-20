@@ -1,5 +1,5 @@
 // Package statemachine provides the functions and structs to set up and
-// execute a state machine based ubuntu-image build
+// execute a state machine based cedar build
 package statemachine
 
 import (
@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	metadataStateFile = "ubuntu-image.json"
+	metadataStateFile = "cedar.json"
 )
 
 var gadgetYamlPathInTree = filepath.Join("meta", "gadget.yaml")
@@ -146,7 +146,7 @@ func (stateMachine *StateMachine) readMetadata(metadataFile string) error {
 	if !stateMachine.stateMachineFlags.Resume {
 		return nil
 	}
-	// open the ubuntu-image.json file and load the state
+	// open the cedar.json file and load the state
 	var partialStateMachine = &StateMachine{}
 	jsonfilePath := filepath.Join(stateMachine.stateMachineFlags.WorkDir, metadataFile)
 	jsonfile, err := os.ReadFile(jsonfilePath)
@@ -275,7 +275,7 @@ func (stateMachine *StateMachine) writeMetadata(metadataFile string) error {
 func (stateMachine *StateMachine) makeTemporaryDirectories() error {
 	// if no workdir was specified, open a /tmp dir
 	if stateMachine.stateMachineFlags.WorkDir == "" {
-		stateMachine.stateMachineFlags.WorkDir = filepath.Join("/tmp", "ubuntu-image-"+uuid.NewString())
+		stateMachine.stateMachineFlags.WorkDir = filepath.Join("/tmp", "cedar-"+uuid.NewString())
 		if err := osMkdir(stateMachine.stateMachineFlags.WorkDir, 0755); err != nil {
 			return fmt.Errorf("Failed to create temporary directory: %s", err.Error())
 		}

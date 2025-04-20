@@ -720,7 +720,7 @@ func TestClassicMachine_manualMakeDirs_fail(t *testing.T) {
 		},
 	}
 
-	tmpDir, err := os.MkdirTemp("/tmp", "ubuntu-image-")
+	tmpDir, err := os.MkdirTemp("/tmp", "cedar-")
 	asserter.AssertErrNil(err, true)
 	t.Cleanup(func() { os.RemoveAll(tmpDir) })
 
@@ -986,8 +986,8 @@ func TestManifestRevisionFormat(t *testing.T) {
 }
 
 // TestLP1981720 tests a bug that occurred when a structure had no content specified,
-// but the content was created by an earlier step of ubuntu-image
-// https://bugs.launchpad.net/ubuntu-image/+bug/1981720
+// but the content was created by an earlier step of cedar
+// https://bugs.launchpad.net/cedar/+bug/1981720
 func TestLP1981720(t *testing.T) {
 	asserter := helper.Asserter{T: t}
 	var stateMachine StateMachine

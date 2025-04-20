@@ -19,7 +19,7 @@ var blockSize string = "1"
 var (
 	MKE2FS_CONFIG_ENV  = "MKE2FS_CONFIG"
 	MKE2FS_CONFIG_FILE = "mke2fs.conf"
-	MKE2FS_BASE_PATH   = "/etc/ubuntu-image/mkfs"
+	MKE2FS_BASE_PATH   = "/etc/cedar/mkfs"
 )
 
 // validateInput ensures that command line flags for the state machine are valid. These
@@ -105,7 +105,7 @@ func (stateMachine *StateMachine) cleanup() error {
 func WriteSnapManifest(snapsDir string, outputPath string) error {
 	files, err := osReadDir(snapsDir)
 	if err != nil {
-		// As per previous ubuntu-image manifest generation, we skip generating
+		// As per previous cedar manifest generation, we skip generating
 		// manifests for non-existent/invalid paths
 		return nil
 	}

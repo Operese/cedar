@@ -1,11 +1,11 @@
-// Package ubuntu-image provides a tool used for generating bootable images.
+// Package cedar provides a tool used for generating bootable images.
 // You can use it to build two types of Ubuntu images:
 //
 // * Snap-based Ubuntu Core images from model assertions
 // * Classical preinstalled Ubuntu images using image definitions
 //
-// ubuntu-image is intended to be used as Snap package available from
-// https://snapcraft.io/ubuntu-image
+// cedar is intended to be used as Snap package available from
+// https://snapcraft.io/cedar
 //
 // See the project README for more details:
 // https://operese/cedar
@@ -23,7 +23,7 @@ import (
 	"operese/cedar/internal/statemachine"
 )
 
-// Version holds the ubuntu-image version number
+// Version holds the cedar version number
 // this is usually overridden at build time
 var Version string = ""
 
@@ -34,7 +34,7 @@ var captureStd = helper.CaptureStd
 var stateMachineLongDesc = `Options for controlling the internal state machine.
 Other than -w, these options are mutually exclusive. When -u or -t is given,
 the state machine can be resumed later with -r, but -w must be given in that
-case since the state is saved in a ubuntu-image.json file in the working directory.`
+case since the state is saved in a cedar.json file in the working directory.`
 
 func initStateMachine(commonOpts *commands.CommonOpts, stateMachineOpts *commands.StateMachineOpts, classicCommand *commands.ClassicCommand) (statemachine.SmInterface, error) {
 	var stateMachine statemachine.SmInterface
@@ -157,7 +157,7 @@ func main() { //nolint: gocyclo
 		if Version == "" {
 			Version = os.Getenv("SNAP_VERSION")
 		}
-		fmt.Printf("ubuntu-image %s\n", Version)
+		fmt.Printf("cedar %s\n", Version)
 		osExit(0)
 		return
 	}
