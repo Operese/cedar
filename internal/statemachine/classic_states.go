@@ -1,16 +1,13 @@
 package statemachine
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"regexp"
-	"strings"
 
 	"github.com/snapcore/snapd/image"
 	"github.com/snapcore/snapd/image/preseed"
@@ -29,73 +26,6 @@ var (
 	localePresentRegex = regexp.MustCompile(`(?m)^LANG=|LC_[A-Z_]+=`)
 )
 
-// fixHostname set fresh hostname since debootstrap copies /etc/hostname from build environment
-func (stateMachine *StateMachine) fixHostname() error {
-	hostname := filepath.Join(stateMachine.tempDirs.chroot, "etc", "hostname")
-	hostnameFile, err := osOpenFile(hostname, os.O_TRUNC|os.O_WRONLY, 0644)
-	if err != nil {
-		return fmt.Errorf("unable to open hostname file: %w", err)
-	}
-	defer hostnameFile.Close()
-	_, err = hostnameFile.WriteString("ubuntu\n")
-	if err != nil {
-		return fmt.Errorf("unable to write hostname: %w", err)
-	}
-	return nil
-}
-
-// generateMountPointCmds generate lists of mount/umount commands for a list of mountpoints
-func generateMountPointCmds(mountPoints []*mountPoint, scratchDir string) (allMountCmds []*exec.Cmd, allUmountCmds []*exec.Cmd, err error) {
-	for _, mp := range mountPoints {
-		var mountCmds, umountCmds []*exec.Cmd
-		var err error
-		if mp.bind {
-			mp.src, err = osMkdirTemp(scratchDir, strings.Trim(mp.relpath, "/"))
-			if err != nil {
-				return nil, nil, fmt.Errorf("Error making temporary directory for mountpoint \"%s\": \"%s\"",
-					mp.relpath,
-					err.Error(),
-				)
-			}
-		}
-
-		mountCmds, umountCmds, err = mp.getMountCmd()
-		if err != nil {
-			return nil, nil, fmt.Errorf("Error preparing mountpoint \"%s\": \"%s\"",
-				mp.relpath,
-				err.Error(),
-			)
-		}
-
-		allMountCmds = append(allMountCmds, mountCmds...)
-		allUmountCmds = append(umountCmds, allUmountCmds...)
-	}
-	return allMountCmds, allUmountCmds, err
-}
-
-// packagesFromSeed returns a list of packages/snaps from a germinated seed
-func packagesFromSeed(ext string, seedNames []string, germinateDir string) ([]string, error) {
-	var pkgs []string
-	for _, fileName := range seedNames {
-		seedFilePath := filepath.Join(germinateDir, fileName+ext)
-		seedFile, err := osOpen(seedFilePath)
-		if err != nil {
-			return pkgs, fmt.Errorf("Error opening seed file %s: \"%s\"", seedFilePath, err.Error())
-		}
-		defer seedFile.Close()
-
-		seedScanner := bufio.NewScanner(seedFile)
-		for seedScanner.Scan() {
-			seedLine := seedScanner.Bytes()
-			if seedVersionRegex.Match(seedLine) {
-				packageName := strings.Split(string(seedLine), " ")[0]
-				pkgs = append(pkgs, packageName)
-			}
-		}
-	}
-	return pkgs, nil
-}
-
 // addUniqueSnaps returns a list of unique snaps
 func addUniqueSnaps(currentSnaps []string, newSnaps []string) []string {
 	m := make(map[string]bool)
@@ -110,29 +40,6 @@ func addUniqueSnaps(currentSnaps []string, newSnaps []string) []string {
 		snaps = append(snaps, s)
 	}
 	return snaps
-}
-
-// customizeCloudInitFile customizes a cloud-init data file with the given content
-func customizeCloudInitFile(customData string, seedPath string, fileName string, requireHeader bool) error {
-	if customData == "" {
-		return nil
-	}
-	f, err := osCreate(path.Join(seedPath, fileName))
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	if requireHeader && !strings.HasPrefix(customData, "#cloud-config\n") {
-		return fmt.Errorf("provided cloud-init customization for %s is missing proper header", fileName)
-	}
-
-	_, err = f.WriteString(customData)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 var prepareClassicImageState = stateFunc{"prepare_image", (*StateMachine).prepareClassicImage}
