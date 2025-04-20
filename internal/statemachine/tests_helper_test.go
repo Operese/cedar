@@ -10,17 +10,17 @@ import (
 	"github.com/snapcore/snapd/osutil"
 
 	"operese/cedar/internal/helper"
-	"operese/cedar/internal/imagedefinition"
+	"operese/cedar/internal/snaplist"
 )
 
-var basicImageDef = imagedefinition.ImageDefinition{
+var basicImageDef = snaplist.SnapList{
 	Architecture: getHostArch(),
 	Series:       getHostSuite(),
-	Rootfs: &imagedefinition.Rootfs{
+	Rootfs: &snaplist.Rootfs{
 		Archive:           "ubuntu",
 		SourcesListDeb822: helper.BoolPtr(false),
 	},
-	Customization: &imagedefinition.Customization{},
+	Customization: &snaplist.Customization{},
 }
 
 // basicChroot holds the path to the basic chroot

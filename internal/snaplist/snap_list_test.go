@@ -1,4 +1,4 @@
-package imagedefinition
+package snaplist
 
 import (
 	"strings"
@@ -23,7 +23,7 @@ func TestGeneratePocketList(t *testing.T) {
 
 	testCases := []struct {
 		name                string
-		imageDef            ImageDefinition
+		imageDef            SnapList
 		args                args
 		expectedSourcesList string
 	}{
@@ -165,19 +165,19 @@ func TestCustomErrors(t *testing.T) {
 	}
 }
 
-// TestImageDefinition_SetDefaults make sure we do not add a boolean field
+// TestSnapList_SetDefaults make sure we do not add a boolean field
 // with a default value (because we cannot properly apply the default value)
-func TestImageDefinition_SetDefaults(t *testing.T) {
+func TestSnapList_SetDefaults(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name     string
-		imageDef *ImageDefinition
-		want     *ImageDefinition
+		imageDef *SnapList
+		want     *SnapList
 	}{
 		{
 			name: "full",
-			imageDef: &ImageDefinition{
+			imageDef: &SnapList{
 				Gadget: &Gadget{},
 				Rootfs: &Rootfs{
 					Seed:    &Seed{},
@@ -206,7 +206,7 @@ func TestImageDefinition_SetDefaults(t *testing.T) {
 					RootfsTar: &RootfsTar{},
 				},
 			},
-			want: &ImageDefinition{
+			want: &SnapList{
 				Gadget: &Gadget{},
 				Rootfs: &Rootfs{
 					Seed: &Seed{
@@ -259,14 +259,14 @@ func TestImageDefinition_SetDefaults(t *testing.T) {
 		},
 		{
 			name: "minimal conf",
-			imageDef: &ImageDefinition{
+			imageDef: &SnapList{
 				Gadget: &Gadget{},
 				Rootfs: &Rootfs{
 					Seed:    &Seed{},
 					Tarball: &Tarball{},
 				},
 			},
-			want: &ImageDefinition{
+			want: &SnapList{
 				Gadget: &Gadget{},
 				Rootfs: &Rootfs{
 					Seed: &Seed{
@@ -289,12 +289,12 @@ func TestImageDefinition_SetDefaults(t *testing.T) {
 			err := helper.SetDefaults(tt.imageDef)
 			asserter.AssertErrNil(err, true)
 
-			asserter.AssertEqual(tt.want, tt.imageDef, cmp.AllowUnexported(ImageDefinition{}))
+			asserter.AssertEqual(tt.want, tt.imageDef, cmp.AllowUnexported(SnapList{}))
 		})
 	}
 }
 
-func TestImageDefinition_securityMirror(t *testing.T) {
+func TestSnapList_securityMirror(t *testing.T) {
 	type fields struct {
 		Architecture string
 		Rootfs       *Rootfs
@@ -346,12 +346,12 @@ func TestImageDefinition_securityMirror(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			imageDef := ImageDefinition{
+			imageDef := SnapList{
 				Architecture: tt.fields.Architecture,
 				Rootfs:       tt.fields.Rootfs,
 			}
 			if got := imageDef.securityMirror(); got != tt.want {
-				t.Errorf("ImageDefinition.securityMirror() = %v, want %v", got, tt.want)
+				t.Errorf("SnapList.securityMirror() = %v, want %v", got, tt.want)
 			}
 		})
 	}

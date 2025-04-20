@@ -22,8 +22,8 @@ import (
 	"github.com/snapcore/snapd/store"
 
 	"operese/cedar/internal/helper"
-	"operese/cedar/internal/imagedefinition"
 	"operese/cedar/internal/ppa"
+	"operese/cedar/internal/snaplist"
 )
 
 var (
@@ -83,7 +83,7 @@ func (stateMachine *StateMachine) createChroot() error {
 		if err != nil {
 			return err
 		}
-		return stateMachine.setLegacySourcesList(imagedefinition.LegacySourcesListComment)
+		return stateMachine.setLegacySourcesList(snaplist.LegacySourcesListComment)
 	}
 
 	return stateMachine.setLegacySourcesList(classicStateMachine.ImageDef.LegacyBuildSourcesList())
@@ -248,7 +248,7 @@ func (stateMachine *StateMachine) installPackages() error {
 	return nil
 }
 
-func (stateMachine *StateMachine) gatherPackages(imageDef *imagedefinition.ImageDefinition) {
+func (stateMachine *StateMachine) gatherPackages(imageDef *snaplist.SnapList) {
 	if imageDef.Customization != nil {
 		for _, packageInfo := range imageDef.Customization.ExtraPackages {
 			stateMachine.Packages = append(stateMachine.Packages,
@@ -321,7 +321,7 @@ func (stateMachine *StateMachine) verifyArtifactNames() error {
 	return nil
 }
 
-func (stateMachine *StateMachine) prepareImgArtifactsMultipleVolumes(artifacts *imagedefinition.Artifact) error {
+func (stateMachine *StateMachine) prepareImgArtifactsMultipleVolumes(artifacts *snaplist.Artifact) error {
 	if artifacts.Img == nil {
 		return nil
 	}
@@ -340,7 +340,7 @@ func (stateMachine *StateMachine) prepareImgArtifactsMultipleVolumes(artifacts *
 // use as an input file for the conversion.
 // The names of these images are placed in the VolumeNames map, which is used
 // as an input file for an eventual `qemu-convert` operation.
-func (stateMachine *StateMachine) prepareQcow2ArtifactsMultipleVolumes(artifacts *imagedefinition.Artifact) error {
+func (stateMachine *StateMachine) prepareQcow2ArtifactsMultipleVolumes(artifacts *snaplist.Artifact) error {
 	if artifacts.Qcow2 == nil {
 		return nil
 	}
@@ -371,7 +371,7 @@ func (stateMachine *StateMachine) prepareQcow2ArtifactsMultipleVolumes(artifacts
 	return nil
 }
 
-func (stateMachine *StateMachine) prepareImgArtifactOneVolume(artifacts *imagedefinition.Artifact) {
+func (stateMachine *StateMachine) prepareImgArtifactOneVolume(artifacts *snaplist.Artifact) {
 	if artifacts.Img == nil {
 		return
 	}
@@ -391,7 +391,7 @@ func (stateMachine *StateMachine) prepareImgArtifactOneVolume(artifacts *imagede
 // use as an input file for the conversion.
 // The names of these images are placed in the VolumeNames map, which is used
 // as an input file for an eventual `qemu-convert` operation.
-func (stateMachine *StateMachine) prepareQcow2ArtifactOneVolume(artifacts *imagedefinition.Artifact) {
+func (stateMachine *StateMachine) prepareQcow2ArtifactOneVolume(artifacts *snaplist.Artifact) {
 	if artifacts.Qcow2 == nil {
 		return
 	}
@@ -811,13 +811,13 @@ func ensureSnapBasesInstalled(imageOpts *image.Options) error {
 
 // addExtraSnaps adds any extra snaps from the image definition to the list
 // This should be done last to ensure the correct channels are being used
-func addExtraSnaps(imageOpts *image.Options, imageDefinition *imagedefinition.ImageDefinition) error {
-	if imageDefinition.Customization == nil || len(imageDefinition.Customization.ExtraSnaps) == 0 {
+func addExtraSnaps(imageOpts *image.Options, snapList *snaplist.SnapList) error {
+	if snapList.Customization == nil || len(snapList.Customization.ExtraSnaps) == 0 {
 		return nil
 	}
 
 	imageOpts.SeedManifest = seedwriter.NewManifest()
-	for _, extraSnap := range imageDefinition.Customization.ExtraSnaps {
+	for _, extraSnap := range snapList.Customization.ExtraSnaps {
 		if !helper.SliceHasElement(imageOpts.Snaps, extraSnap.SnapName) {
 			imageOpts.Snaps = append(imageOpts.Snaps, extraSnap.SnapName)
 		}
@@ -978,7 +978,7 @@ func (stateMachine *StateMachine) customizeSourcesList() error {
 		if err != nil {
 			return err
 		}
-		return stateMachine.setLegacySourcesList(imagedefinition.LegacySourcesListComment)
+		return stateMachine.setLegacySourcesList(snaplist.LegacySourcesListComment)
 	}
 
 	return stateMachine.setLegacySourcesList(classicStateMachine.ImageDef.LegacyTargetSourcesList())

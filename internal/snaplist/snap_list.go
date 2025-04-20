@@ -1,8 +1,8 @@
 /*
-Package imagedefinition provides the structure for the
+Package snaplist provides the structure for the
 image definition that will be parsed from a YAML file.
 */
-package imagedefinition
+package snaplist
 
 import (
 	"fmt"
@@ -11,9 +11,9 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 )
 
-// ImageDefinition is the parent struct for the data
+// SnapList is the parent struct for the data
 // contained within a classic image definition file
-type ImageDefinition struct {
+type SnapList struct {
 	ImageName      string         `yaml:"name"            json:"ImageName"`
 	DisplayName    string         `yaml:"display-name"    json:"DisplayName"`
 	Revision       int            `yaml:"revision"        json:"Revision,omitempty"`
@@ -308,7 +308,7 @@ type DependentKeyError struct {
 	gojsonschema.ResultErrorFields
 }
 
-func (i ImageDefinition) securityMirror() string {
+func (i SnapList) securityMirror() string {
 	if i.Architecture == "amd64" || i.Architecture == "i386" {
 		return "http://security.ubuntu.com/ubuntu/"
 	}
@@ -358,19 +358,19 @@ func generateLegacySourcesList(series string, components []string, mirror string
 
 // LegacyBuildSourcesList returns the content of the /etc/apt/sources.list to be used
 // during the build process
-func (i *ImageDefinition) LegacyBuildSourcesList() string {
+func (i *SnapList) LegacyBuildSourcesList() string {
 	return i.legacySourcesList(false)
 }
 
 // LegacyTargetSourcesList returns the content of the /etc/apt/sources.list for the target
 // image
-func (i *ImageDefinition) LegacyTargetSourcesList() string {
+func (i *SnapList) LegacyTargetSourcesList() string {
 	return i.legacySourcesList(true)
 }
 
 // legacySourcesList returns the content of the /etc/apt/sources.list file in the
 // legacy format (not deb822).
-func (i *ImageDefinition) legacySourcesList(target bool) string {
+func (i *SnapList) legacySourcesList(target bool) string {
 	pocket := i.Rootfs.Pocket
 	if target {
 		pocket = i.Customization.Pocket
@@ -460,20 +460,20 @@ var ubuntuSourceSecurityHeader = `## Ubuntu security updates. Aside from URIs an
 
 // deb822SourcesList returns the content of /etc/apt/sources.list.d/ubuntu.sources
 // to be used during the build process
-func (i *ImageDefinition) Deb822BuildSourcesList() string {
+func (i *SnapList) Deb822BuildSourcesList() string {
 	return i.deb822SourcesList(false)
 }
 
 // deb822SourcesList returns the content of /etc/apt/sources.list.d/ubuntu.sources
 // for the target image
-func (i *ImageDefinition) Deb822TargetSourcesList() string {
+func (i *SnapList) Deb822TargetSourcesList() string {
 	return i.deb822SourcesList(true)
 }
 
 // deb822SourcesList returns the content of /etc/apt/sources.list.d/ubuntu.sources
 // in the deb822 format.
 // The target param defines if the generated sources list will be used in the target image.
-func (i *ImageDefinition) deb822SourcesList(target bool) string {
+func (i *SnapList) deb822SourcesList(target bool) string {
 	pocket := i.Rootfs.Pocket
 	if target {
 		pocket = i.Customization.Pocket

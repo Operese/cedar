@@ -21,7 +21,7 @@ import (
 	"github.com/snapcore/snapd/seed"
 
 	"operese/cedar/internal/helper"
-	"operese/cedar/internal/imagedefinition"
+	"operese/cedar/internal/snaplist"
 	"operese/cedar/internal/testhelper"
 )
 
@@ -611,11 +611,11 @@ func TestGenerateGerminateCmd(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run("test_generate_germinate_cmd_"+tc.name, func(t *testing.T) {
-			imageDef := imagedefinition.ImageDefinition{
+			imageDef := snaplist.SnapList{
 				Architecture: tc.name,
-				Rootfs: &imagedefinition.Rootfs{
+				Rootfs: &snaplist.Rootfs{
 					Mirror: tc.mirror,
-					Seed: &imagedefinition.Seed{
+					Seed: &snaplist.Seed{
 						SeedURLs:   tc.seedURLs,
 						SeedBranch: "testbranch",
 						Vcs:        helper.BoolPtr(tc.vcs),
@@ -713,7 +713,7 @@ func TestValidateUntilThru(t *testing.T) {
 func TestClassicMachine_manualMakeDirs_fail(t *testing.T) {
 	asserter := helper.Asserter{T: t}
 
-	mkdirs := []*imagedefinition.MakeDirs{
+	mkdirs := []*snaplist.MakeDirs{
 		{
 			Path:        "/test",
 			Permissions: 0755,
@@ -737,7 +737,7 @@ func TestFailedManualCopyFile(t *testing.T) {
 	t.Parallel()
 	asserter := helper.Asserter{T: t}
 
-	copyFiles := []*imagedefinition.CopyFile{
+	copyFiles := []*snaplist.CopyFile{
 		{
 			Dest:   "/test/does/not/exist",
 			Source: "/test/does/not/exist",
@@ -752,7 +752,7 @@ func TestFailedManualTouchFile(t *testing.T) {
 	t.Parallel()
 	asserter := helper.Asserter{T: t}
 
-	touchFiles := []*imagedefinition.TouchFile{
+	touchFiles := []*snaplist.TouchFile{
 		{
 			TouchPath: "/test/does/not/exist",
 		},
@@ -766,7 +766,7 @@ func TestFailedManualExecute(t *testing.T) {
 	t.Parallel()
 	asserter := helper.Asserter{T: t}
 
-	executes := []*imagedefinition.Execute{
+	executes := []*snaplist.Execute{
 		{
 			ExecutePath: "/test/does/not/exist",
 		},
@@ -780,7 +780,7 @@ func TestFailedManualAddGroup(t *testing.T) {
 	t.Parallel()
 	asserter := helper.Asserter{T: t}
 
-	addGroups := []*imagedefinition.AddGroup{
+	addGroups := []*snaplist.AddGroup{
 		{
 			GroupName: "testgroup",
 			GroupID:   "123",
@@ -801,13 +801,13 @@ func Test_manualAddUser(t *testing.T) {
 
 	testCases := []struct {
 		name          string
-		addUsers      []*imagedefinition.AddUser
+		addUsers      []*snaplist.AddUser
 		expectedCmds  []expectedCmd
 		expectedError string
 	}{
 		{
 			name: "create one user",
-			addUsers: []*imagedefinition.AddUser{
+			addUsers: []*snaplist.AddUser{
 				{
 					UserName: "testuser",
 					UserID:   "123",
@@ -824,7 +824,7 @@ func Test_manualAddUser(t *testing.T) {
 		},
 		{
 			name: "create 3 users",
-			addUsers: []*imagedefinition.AddUser{
+			addUsers: []*snaplist.AddUser{
 				{
 					UserName: "testuser1",
 					UserID:   "123",
@@ -920,7 +920,7 @@ func TestFailedManualAddUser(t *testing.T) {
 	t.Parallel()
 	asserter := helper.Asserter{T: t}
 
-	addUsers := []*imagedefinition.AddUser{
+	addUsers := []*snaplist.AddUser{
 		{
 			UserName: "testuser",
 			UserID:   "123",

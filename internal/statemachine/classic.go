@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"operese/cedar/internal/commands"
-	"operese/cedar/internal/imagedefinition"
+	"operese/cedar/internal/snaplist"
 )
 
 var snapSeedStates = []stateFunc{
@@ -22,7 +22,7 @@ var snapSeedStates = []stateFunc{
 // ClassicStateMachine embeds StateMachine and adds the command line flags specific to classic images
 type ClassicStateMachine struct {
 	StateMachine
-	ImageDef imagedefinition.ImageDefinition
+	ImageDef snaplist.SnapList
 	Args     commands.ClassicArgs
 }
 
@@ -33,7 +33,7 @@ func (classicStateMachine *ClassicStateMachine) Setup() error {
 
 	classicStateMachine.states = make([]stateFunc, 0)
 
-	if err := classicStateMachine.setConfDefDir(classicStateMachine.parent.(*ClassicStateMachine).Args.ImageDefinition); err != nil {
+	if err := classicStateMachine.setConfDefDir(classicStateMachine.parent.(*ClassicStateMachine).Args.SnapList); err != nil {
 		return err
 	}
 
@@ -42,7 +42,7 @@ func (classicStateMachine *ClassicStateMachine) Setup() error {
 		return err
 	}
 
-	if err := classicStateMachine.parseImageDefinition(); err != nil {
+	if err := classicStateMachine.parseSnapList(); err != nil {
 		return err
 	}
 
@@ -82,84 +82,84 @@ func (classicStateMachine *ClassicStateMachine) SetSeries() error {
 	return nil
 }
 
-// parseImageDefinition parses the provided yaml file and ensures it is valid
-func (stateMachine *StateMachine) parseImageDefinition() error {
+// parseSnapList parses the provided yaml file and ensures it is valid
+func (stateMachine *StateMachine) parseSnapList() error {
 	classicStateMachine := stateMachine.parent.(*ClassicStateMachine)
 
-	imageDefinition, err := readImageDefinition(classicStateMachine.Args.ImageDefinition)
+	snapList, err := readSnapList(classicStateMachine.Args.SnapList)
 	if err != nil {
 		return err
 	}
 
-	if imageDefinition.Rootfs != nil && imageDefinition.Rootfs.SourcesListDeb822 == nil {
+	if snapList.Rootfs != nil && snapList.Rootfs.SourcesListDeb822 == nil {
 		fmt.Print("WARNING: rootfs.sources-list-deb822 was not set. Please explicitly set the format desired for sources list in your image definition.\n")
 	}
 
-	// populate the default values for imageDefinition if they were not provided in
+	// populate the default values for snapList if they were not provided in
 	// the image definition YAML file
-	if err := helperSetDefaults(imageDefinition); err != nil {
+	if err := helperSetDefaults(snapList); err != nil {
 		return err
 	}
 
-	if imageDefinition.Rootfs != nil && *imageDefinition.Rootfs.SourcesListDeb822 {
+	if snapList.Rootfs != nil && *snapList.Rootfs.SourcesListDeb822 {
 		fmt.Print("WARNING: rootfs.sources-list-deb822 is set to true. The DEB822 format will be used to manage sources list. Please make sure you are not building an image older than noble.\n")
 	} else {
 		fmt.Print("WARNING: rootfs.sources-list-deb822 is set to false. The deprecated format will be used to manage sources list. Please if possible adopt the new format.\n")
 	}
 
-	err = validateImageDefinition(imageDefinition)
+	err = validateSnapList(snapList)
 	if err != nil {
 		return err
 	}
 
-	classicStateMachine.ImageDef = *imageDefinition
+	classicStateMachine.ImageDef = *snapList
 
 	return nil
 }
 
-func readImageDefinition(imageDefPath string) (*imagedefinition.ImageDefinition, error) {
-	imageDefinition := &imagedefinition.ImageDefinition{}
-	imageFile, err := os.Open(imageDefPath)
+func readSnapList(snapListPath string) (*snaplist.SnapList, error) {
+	snapList := &snaplist.SnapList{}
+	imageFile, err := os.Open(snapListPath)
 	if err != nil {
 		return nil, fmt.Errorf("Error opening image definition file: %s", err.Error())
 	}
 	defer imageFile.Close()
-	if err := yaml.NewDecoder(imageFile).Decode(imageDefinition); err != nil {
+	if err := yaml.NewDecoder(imageFile).Decode(snapList); err != nil {
 		return nil, err
 	}
 
-	return imageDefinition, nil
+	return snapList, nil
 }
 
-// validateImageDefinition validates the given imageDefinition
+// validateSnapList validates the given snapList
 // The official standard for YAML schemas states that they are an extension of
 // JSON schema draft 4. We therefore validate the decoded YAML against a JSON
 // schema. The workflow is as follows:
 // 1. Use the jsonschema library to generate a schema from the struct definition
 // 2. Load the created schema and parsed yaml into types defined by gojsonschema
 // 3. Use the gojsonschema library to validate the parsed YAML against the schema
-func validateImageDefinition(imageDefinition *imagedefinition.ImageDefinition) error {
+func validateSnapList(snapList *snaplist.SnapList) error {
 	var jsonReflector jsonschema.Reflector
 
-	// 1. parse the ImageDefinition struct into a schema using the jsonschema tags
-	schema := jsonReflector.Reflect(imagedefinition.ImageDefinition{})
+	// 1. parse the SnapList struct into a schema using the jsonschema tags
+	schema := jsonReflector.Reflect(snaplist.SnapList{})
 
 	// 2. load the schema and parsed YAML data into types understood by gojsonschema
 	schemaLoader := gojsonschema.NewGoLoader(schema)
-	imageDefinitionLoader := gojsonschema.NewGoLoader(imageDefinition)
+	snapListLoader := gojsonschema.NewGoLoader(snapList)
 
 	// 3. validate the parsed data against the schema
-	result, err := gojsonschemaValidate(schemaLoader, imageDefinitionLoader)
+	result, err := gojsonschemaValidate(schemaLoader, snapListLoader)
 	if err != nil {
 		return fmt.Errorf("Schema validation returned an error: %s", err.Error())
 	}
 
-	err = validateGadget(imageDefinition, result)
+	err = validateGadget(snapList, result)
 	if err != nil {
 		return err
 	}
 
-	err = validateCustomization(imageDefinition, result)
+	err = validateCustomization(snapList, result)
 	if err != nil {
 		return err
 	}
@@ -167,7 +167,7 @@ func validateImageDefinition(imageDefinition *imagedefinition.ImageDefinition) e
 	// TODO: I've created a PR upstream in xeipuuv/gojsonschema
 	// https://github.com/xeipuuv/gojsonschema/pull/352
 	// if it gets merged this can be removed
-	err = helperCheckEmptyFields(imageDefinition, result, schema)
+	err = helperCheckEmptyFields(snapList, result, schema)
 	if err != nil {
 		return err
 	}
@@ -180,17 +180,17 @@ func validateImageDefinition(imageDefinition *imagedefinition.ImageDefinition) e
 }
 
 // validateGadget validates the Gadget section of the image definition
-func validateGadget(imageDefinition *imagedefinition.ImageDefinition, result *gojsonschema.Result) error {
+func validateGadget(snapList *snaplist.SnapList, result *gojsonschema.Result) error {
 	// Do custom validation for gadgetURL being required if gadget is not pre-built
-	if imageDefinition.Gadget != nil {
-		if imageDefinition.Gadget.GadgetType != "prebuilt" && imageDefinition.Gadget.GadgetURL == "" {
+	if snapList.Gadget != nil {
+		if snapList.Gadget.GadgetType != "prebuilt" && snapList.Gadget.GadgetURL == "" {
 			jsonContext := gojsonschema.NewJsonContext("gadget_validation", nil)
 			errDetail := gojsonschema.ErrorDetails{
 				"key":   "gadget:type",
-				"value": imageDefinition.Gadget.GadgetType,
+				"value": snapList.Gadget.GadgetType,
 			}
 			result.AddError(
-				imagedefinition.NewMissingURLError(
+				snaplist.NewMissingURLError(
 					gojsonschema.NewJsonContext("missingURL", jsonContext),
 					52,
 					errDetail,
@@ -198,8 +198,8 @@ func validateGadget(imageDefinition *imagedefinition.ImageDefinition, result *go
 				errDetail,
 			)
 		}
-	} else if imageDefinition.Artifacts != nil {
-		diskUsed, err := helperCheckTags(imageDefinition.Artifacts, "is_disk")
+	} else if snapList.Artifacts != nil {
+		diskUsed, err := helperCheckTags(snapList.Artifacts, "is_disk")
 		if err != nil {
 			return fmt.Errorf("Error checking struct tags for Artifacts: \"%s\"", err.Error())
 		}
@@ -210,7 +210,7 @@ func validateGadget(imageDefinition *imagedefinition.ImageDefinition, result *go
 				"key2": "gadget:",
 			}
 			result.AddError(
-				imagedefinition.NewDependentKeyError(
+				snaplist.NewDependentKeyError(
 					gojsonschema.NewJsonContext("dependentKey", jsonContext),
 					52,
 					errDetail,
@@ -224,32 +224,32 @@ func validateGadget(imageDefinition *imagedefinition.ImageDefinition, result *go
 }
 
 // validateCustomization validates the Customization section of the image definition
-func validateCustomization(imageDefinition *imagedefinition.ImageDefinition, result *gojsonschema.Result) error {
-	if imageDefinition.Customization == nil {
+func validateCustomization(snapList *snaplist.SnapList, result *gojsonschema.Result) error {
+	if snapList.Customization == nil {
 		return nil
 	}
 
-	validateExtraPPAs(imageDefinition, result)
-	if imageDefinition.Customization.Manual != nil {
+	validateExtraPPAs(snapList, result)
+	if snapList.Customization.Manual != nil {
 		jsonContext := gojsonschema.NewJsonContext("manual_path_validation", nil)
-		validateManualMakeDirs(imageDefinition, result, jsonContext)
-		validateManualCopyFile(imageDefinition, result, jsonContext)
-		validateManualTouchFile(imageDefinition, result, jsonContext)
+		validateManualMakeDirs(snapList, result, jsonContext)
+		validateManualCopyFile(snapList, result, jsonContext)
+		validateManualTouchFile(snapList, result, jsonContext)
 	}
 
 	return nil
 }
 
 // validateExtraPPAs validates the Customization.ExtraPPAs section of the image definition
-func validateExtraPPAs(imageDefinition *imagedefinition.ImageDefinition, result *gojsonschema.Result) {
-	for _, p := range imageDefinition.Customization.ExtraPPAs {
+func validateExtraPPAs(snapList *snaplist.SnapList, result *gojsonschema.Result) {
+	for _, p := range snapList.Customization.ExtraPPAs {
 		if p.Auth != "" && p.Fingerprint == "" {
 			jsonContext := gojsonschema.NewJsonContext("ppa_validation", nil)
 			errDetail := gojsonschema.ErrorDetails{
 				"ppaName": p.Name,
 			}
 			result.AddError(
-				imagedefinition.NewInvalidPPAError(
+				snaplist.NewInvalidPPAError(
 					gojsonschema.NewJsonContext("missingPrivatePPAFingerprint",
 						jsonContext),
 					52,
@@ -262,31 +262,31 @@ func validateExtraPPAs(imageDefinition *imagedefinition.ImageDefinition, result 
 }
 
 // validateManualMakeDirs validates the Customization.Manual.MakeDirs section of the image definition
-func validateManualMakeDirs(imageDefinition *imagedefinition.ImageDefinition, result *gojsonschema.Result, jsonContext *gojsonschema.JsonContext) {
-	if imageDefinition.Customization.Manual.MakeDirs == nil {
+func validateManualMakeDirs(snapList *snaplist.SnapList, result *gojsonschema.Result, jsonContext *gojsonschema.JsonContext) {
+	if snapList.Customization.Manual.MakeDirs == nil {
 		return
 	}
-	for _, mkdir := range imageDefinition.Customization.Manual.MakeDirs {
+	for _, mkdir := range snapList.Customization.Manual.MakeDirs {
 		validateAbsolutePath(mkdir.Path, "customization:manual:mkdir:destination", result, jsonContext)
 	}
 }
 
 // validateManualCopyFile validates the Customization.Manual.CopyFile section of the image definition
-func validateManualCopyFile(imageDefinition *imagedefinition.ImageDefinition, result *gojsonschema.Result, jsonContext *gojsonschema.JsonContext) {
-	if imageDefinition.Customization.Manual.CopyFile == nil {
+func validateManualCopyFile(snapList *snaplist.SnapList, result *gojsonschema.Result, jsonContext *gojsonschema.JsonContext) {
+	if snapList.Customization.Manual.CopyFile == nil {
 		return
 	}
-	for _, copy := range imageDefinition.Customization.Manual.CopyFile {
+	for _, copy := range snapList.Customization.Manual.CopyFile {
 		validateAbsolutePath(copy.Dest, "customization:manual:copy-file:destination", result, jsonContext)
 	}
 }
 
 // validateManualTouchFile validates the Customization.Manual.TouchFile section of the image definition
-func validateManualTouchFile(imageDefinition *imagedefinition.ImageDefinition, result *gojsonschema.Result, jsonContext *gojsonschema.JsonContext) {
-	if imageDefinition.Customization.Manual.TouchFile == nil {
+func validateManualTouchFile(snapList *snaplist.SnapList, result *gojsonschema.Result, jsonContext *gojsonschema.JsonContext) {
+	if snapList.Customization.Manual.TouchFile == nil {
 		return
 	}
-	for _, touch := range imageDefinition.Customization.Manual.TouchFile {
+	for _, touch := range snapList.Customization.Manual.TouchFile {
 		validateAbsolutePath(touch.TouchPath, "customization:manual:touch-file:path", result, jsonContext)
 	}
 }
@@ -301,7 +301,7 @@ func validateAbsolutePath(path string, errorKey string, result *gojsonschema.Res
 			"value": path,
 		}
 		result.AddError(
-			imagedefinition.NewPathNotAbsoluteError(
+			snaplist.NewPathNotAbsoluteError(
 				gojsonschema.NewJsonContext("nonAbsoluteManualPath",
 					jsonContext),
 				52,

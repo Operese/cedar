@@ -2,7 +2,7 @@ package commands
 
 // ClassicArgs holds the gadget tree. positional arguments need their own struct
 type ClassicArgs struct {
-	ImageDefinition string `positional-arg-name:"image_definition" description:"Classic image definition file. This is used to define what should be in the image and the outputs that are created."`
+	SnapList string `positional-arg-name:"snap_list" description:"Extra snap list file. This is used to define what snaps should be added to the image."`
 }
 
 type ClassicCommand struct {

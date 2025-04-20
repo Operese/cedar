@@ -20,7 +20,7 @@ import (
 	"github.com/snapcore/snapd/timings"
 
 	"operese/cedar/internal/helper"
-	"operese/cedar/internal/imagedefinition"
+	"operese/cedar/internal/snaplist"
 )
 
 var runCmd = helper.RunCmd
@@ -530,31 +530,31 @@ func parseSnapsAndChannels(snaps []string) (snapNames []string, snapChannels map
 
 // generateGerminateCmd creates the appropriate germinate command for the
 // values configured in the image definition yaml file
-func generateGerminateCmd(imageDefinition imagedefinition.ImageDefinition) *exec.Cmd {
+func generateGerminateCmd(snapList snaplist.SnapList) *exec.Cmd {
 	// determine the value for the seed-dist in the form of <archive>.<series>
-	seedDist := imageDefinition.Rootfs.Flavor
-	if imageDefinition.Rootfs.Seed.SeedBranch != "" {
-		seedDist = seedDist + "." + imageDefinition.Rootfs.Seed.SeedBranch
+	seedDist := snapList.Rootfs.Flavor
+	if snapList.Rootfs.Seed.SeedBranch != "" {
+		seedDist = seedDist + "." + snapList.Rootfs.Seed.SeedBranch
 	}
 
-	seedSource := strings.Join(imageDefinition.Rootfs.Seed.SeedURLs, ",")
+	seedSource := strings.Join(snapList.Rootfs.Seed.SeedURLs, ",")
 
 	germinateCmd := execCommand(
 		"germinate",
-		"--mirror", imageDefinition.Rootfs.Mirror,
-		"--arch", imageDefinition.Architecture,
-		"--dist", imageDefinition.Series,
+		"--mirror", snapList.Rootfs.Mirror,
+		"--arch", snapList.Architecture,
+		"--dist", snapList.Series,
 		"--seed-source", seedSource,
 		"--seed-dist", seedDist,
 		"--no-rdepends",
 	)
 
-	if *imageDefinition.Rootfs.Seed.Vcs {
+	if *snapList.Rootfs.Seed.Vcs {
 		germinateCmd.Args = append(germinateCmd.Args, "--vcs=auto")
 	}
 
-	if len(imageDefinition.Rootfs.Components) > 0 {
-		components := strings.Join(imageDefinition.Rootfs.Components, ",")
+	if len(snapList.Rootfs.Components) > 0 {
+		components := strings.Join(snapList.Rootfs.Components, ",")
 		germinateCmd.Args = append(germinateCmd.Args, "--components="+components)
 	}
 
@@ -563,27 +563,27 @@ func generateGerminateCmd(imageDefinition imagedefinition.ImageDefinition) *exec
 
 // generateDebootstrapCmd generates the debootstrap command used to create a chroot
 // environment that will eventually become the rootfs of the resulting image
-func generateDebootstrapCmd(imageDefinition imagedefinition.ImageDefinition, targetDir string) *exec.Cmd {
+func generateDebootstrapCmd(snapList snaplist.SnapList, targetDir string) *exec.Cmd {
 	debootstrapCmd := execCommand("debootstrap",
-		"--arch", imageDefinition.Architecture,
+		"--arch", snapList.Architecture,
 		"--variant=minbase",
 	)
 
-	if imageDefinition.Customization != nil && len(imageDefinition.Customization.ExtraPPAs) > 0 {
+	if snapList.Customization != nil && len(snapList.Customization.ExtraPPAs) > 0 {
 		// ca-certificates is needed to use PPAs
 		debootstrapCmd.Args = append(debootstrapCmd.Args, "--include=ca-certificates")
 	}
 
-	if len(imageDefinition.Rootfs.Components) > 0 {
-		components := strings.Join(imageDefinition.Rootfs.Components, ",")
+	if len(snapList.Rootfs.Components) > 0 {
+		components := strings.Join(snapList.Rootfs.Components, ",")
 		debootstrapCmd.Args = append(debootstrapCmd.Args, "--components="+components)
 	}
 
 	// add the SUITE TARGET and MIRROR arguments
 	debootstrapCmd.Args = append(debootstrapCmd.Args, []string{
-		imageDefinition.Series,
+		snapList.Series,
 		targetDir,
-		imageDefinition.Rootfs.Mirror,
+		snapList.Rootfs.Mirror,
 	}...)
 
 	return debootstrapCmd
@@ -712,7 +712,7 @@ func execTeardownCmds(teardownCmds []*exec.Cmd, debug bool, prevErr error) (err 
 }
 
 // manualMakeDirs creates a directory (and intermediate directories) into the chroot
-func manualMakeDirs(customizations []*imagedefinition.MakeDirs, targetDir string, debug bool) error {
+func manualMakeDirs(customizations []*snaplist.MakeDirs, targetDir string, debug bool) error {
 	for _, c := range customizations {
 		path := filepath.Join(targetDir, c.Path)
 		if debug {
@@ -727,7 +727,7 @@ func manualMakeDirs(customizations []*imagedefinition.MakeDirs, targetDir string
 }
 
 // manualCopyFile copies a file into the chroot
-func manualCopyFile(customizations []*imagedefinition.CopyFile, confDefPath string, targetDir string, debug bool) error {
+func manualCopyFile(customizations []*snaplist.CopyFile, confDefPath string, targetDir string, debug bool) error {
 	for _, c := range customizations {
 		source := filepath.Join(confDefPath, c.Source)
 		dest := filepath.Join(targetDir, c.Dest)
@@ -743,7 +743,7 @@ func manualCopyFile(customizations []*imagedefinition.CopyFile, confDefPath stri
 }
 
 // manualExecute executes executable files in the chroot
-func manualExecute(customizations []*imagedefinition.Execute, targetDir string, debug bool) error {
+func manualExecute(customizations []*snaplist.Execute, targetDir string, debug bool) error {
 	for _, c := range customizations {
 		executeCmd := execCommand("chroot", targetDir, c.ExecutePath)
 		if debug {
@@ -760,7 +760,7 @@ func manualExecute(customizations []*imagedefinition.Execute, targetDir string, 
 }
 
 // manualTouchFile touches files in the chroot
-func manualTouchFile(customizations []*imagedefinition.TouchFile, targetDir string, debug bool) error {
+func manualTouchFile(customizations []*snaplist.TouchFile, targetDir string, debug bool) error {
 	for _, c := range customizations {
 		fullPath := filepath.Join(targetDir, c.TouchPath)
 		if debug {
@@ -775,7 +775,7 @@ func manualTouchFile(customizations []*imagedefinition.TouchFile, targetDir stri
 }
 
 // manualAddGroup adds groups in the chroot
-func manualAddGroup(customizations []*imagedefinition.AddGroup, targetDir string, debug bool) error {
+func manualAddGroup(customizations []*snaplist.AddGroup, targetDir string, debug bool) error {
 	for _, c := range customizations {
 		addGroupCmd := execCommand("chroot", targetDir, "groupadd", c.GroupName)
 		debugStatement := fmt.Sprintf("Adding group \"%s\"\n", c.GroupName)
@@ -797,7 +797,7 @@ func manualAddGroup(customizations []*imagedefinition.AddGroup, targetDir string
 }
 
 // manualAddUser adds users in the chroot
-func manualAddUser(customizations []*imagedefinition.AddUser, targetDir string, debug bool) error {
+func manualAddUser(customizations []*snaplist.AddUser, targetDir string, debug bool) error {
 	for _, c := range customizations {
 		debugStatement := fmt.Sprintf("Adding user \"%s\"\n", c.UserName)
 		var addUserCmds []*exec.Cmd

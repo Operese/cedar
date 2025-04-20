@@ -26,7 +26,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"operese/cedar/internal/helper"
-	"operese/cedar/internal/imagedefinition"
+	"operese/cedar/internal/snaplist"
 	"operese/cedar/internal/testhelper"
 )
 
@@ -48,7 +48,7 @@ func TestClassicSetup(t *testing.T) {
 	var stateMachine ClassicStateMachine
 	stateMachine.commonFlags, stateMachine.stateMachineFlags = helper.InitCommonOpts()
 	stateMachine.parent = &stateMachine
-	stateMachine.Args.ImageDefinition = filepath.Join("testdata", "image_definitions",
+	stateMachine.Args.SnapList = filepath.Join("testdata", "image_definitions",
 		"test_amd64.yaml")
 
 	err := stateMachine.Setup()
@@ -60,10 +60,10 @@ func TestClassicSetup(t *testing.T) {
 func TestYAMLSchemaParsing(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
-		name            string
-		imageDefinition string
-		shouldPass      bool
-		expectedError   string
+		name          string
+		snapList      string
+		shouldPass    bool
+		expectedError string
 	}{
 		{"valid_image_definition", "test_raspi.yaml", true, ""},
 		{"valid_image_definition_no_gadget_no_artifact", "test_image_without_gadget_artifact.yaml", true, ""},
@@ -76,7 +76,7 @@ func TestYAMLSchemaParsing(t *testing.T) {
 		{"git_gadget_without_url", "test_git_gadget_without_url.yaml", false, "When key gadget:type is specified as git, a URL must be provided"},
 		{"file_doesnt_exist", "test_not_exist.yaml", false, "no such file or directory"},
 		{"not_valid_yaml", "test_invalid_yaml.yaml", false, "yaml: unmarshal errors"},
-		{"missing_yaml_fields", "test_missing_name.yaml", false, "Key \"name\" is required in struct \"ImageDefinition\", but is not in the YAML file!"},
+		{"missing_yaml_fields", "test_missing_name.yaml", false, "Key \"name\" is required in struct \"SnapList\", but is not in the YAML file!"},
 		{"private_ppa_without_fingerprint", "test_private_ppa_without_fingerprint.yaml", false, "Fingerprint is required for private PPAs"},
 		{"invalid_paths_in_manual_copy", "test_invalid_paths_in_manual_copy.yaml", false, "needs to be an absolute path (../../malicious)"},
 		{"invalid_paths_in_manual_copy_bug", "test_invalid_paths_in_manual_copy.yaml", false, "needs to be an absolute path (/../../malicious)"},
@@ -95,9 +95,9 @@ func TestYAMLSchemaParsing(t *testing.T) {
 			var stateMachine ClassicStateMachine
 			stateMachine.commonFlags, stateMachine.stateMachineFlags = helper.InitCommonOpts()
 			stateMachine.parent = &stateMachine
-			stateMachine.Args.ImageDefinition = filepath.Join("testdata", "image_definitions",
-				tc.imageDefinition)
-			err := stateMachine.parseImageDefinition()
+			stateMachine.Args.SnapList = filepath.Join("testdata", "image_definitions",
+				tc.snapList)
+			err := stateMachine.parseSnapList()
 
 			if tc.shouldPass {
 				asserter.AssertErrNil(err, false)
@@ -108,9 +108,9 @@ func TestYAMLSchemaParsing(t *testing.T) {
 	}
 }
 
-// TestFailedParseImageDefinition mocks function calls to test
-// failure cases in the parseImageDefinition state
-func TestFailedParseImageDefinition(t *testing.T) {
+// TestFailedParseSnapList mocks function calls to test
+// failure cases in the parseSnapList state
+func TestFailedParseSnapList(t *testing.T) {
 	asserter := helper.Asserter{T: t}
 	restoreCWD := testhelper.SaveCWD()
 	defer restoreCWD()
@@ -118,7 +118,7 @@ func TestFailedParseImageDefinition(t *testing.T) {
 	var stateMachine ClassicStateMachine
 	stateMachine.commonFlags, stateMachine.stateMachineFlags = helper.InitCommonOpts()
 	stateMachine.parent = &stateMachine
-	stateMachine.Args.ImageDefinition = filepath.Join("testdata", "image_definitions",
+	stateMachine.Args.SnapList = filepath.Join("testdata", "image_definitions",
 		"test_raspi.yaml")
 
 	// mock helper.SetDefaults
@@ -126,7 +126,7 @@ func TestFailedParseImageDefinition(t *testing.T) {
 	t.Cleanup(func() {
 		helperSetDefaults = helper.SetDefaults
 	})
-	err := stateMachine.parseImageDefinition()
+	err := stateMachine.parseSnapList()
 	asserter.AssertErrContains(err, "Test Error")
 	helperSetDefaults = helper.SetDefaults
 
@@ -135,7 +135,7 @@ func TestFailedParseImageDefinition(t *testing.T) {
 	t.Cleanup(func() {
 		helperCheckEmptyFields = helper.CheckEmptyFields
 	})
-	err = stateMachine.parseImageDefinition()
+	err = stateMachine.parseSnapList()
 	asserter.AssertErrContains(err, "Test Error")
 	helperCheckEmptyFields = helper.CheckEmptyFields
 
@@ -144,36 +144,36 @@ func TestFailedParseImageDefinition(t *testing.T) {
 	t.Cleanup(func() {
 		gojsonschemaValidate = gojsonschema.Validate
 	})
-	err = stateMachine.parseImageDefinition()
+	err = stateMachine.parseSnapList()
 	asserter.AssertErrContains(err, "Schema validation returned an error")
 	gojsonschemaValidate = gojsonschema.Validate
 
 	// mock helper.CheckTags
 	// the gadget must be set to nil for this test to work
-	stateMachine.Args.ImageDefinition = filepath.Join("testdata", "image_definitions",
+	stateMachine.Args.SnapList = filepath.Join("testdata", "image_definitions",
 		"test_image_without_gadget.yaml")
 	helperCheckTags = mockCheckTags
 	t.Cleanup(func() {
 		helperCheckTags = helper.CheckTags
 	})
-	err = stateMachine.parseImageDefinition()
+	err = stateMachine.parseSnapList()
 	asserter.AssertErrContains(err, "Test Error")
 	helperCheckTags = helper.CheckTags
 }
 
 // TestClassicStateMachine_calculateStates reads in a variety of yaml files and ensures
 // that the correct states are added to the state machine
-// TODO: manually assemble the image definitions instead of relying on the parseImageDefinition() function to make this more of a unit test
+// TODO: manually assemble the image definitions instead of relying on the parseSnapList() function to make this more of a unit test
 func TestClassicStateMachine_calculateStates(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
-		name            string
-		imageDefinition string
-		expectedStates  []string
+		name           string
+		snapList       string
+		expectedStates []string
 	}{
 		{
-			name:            "state_build_gadget",
-			imageDefinition: "test_build_gadget.yaml",
+			name:     "state_build_gadget",
+			snapList: "test_build_gadget.yaml",
 			expectedStates: []string{
 				"build_gadget_tree",
 				"prepare_gadget_tree",
@@ -198,8 +198,8 @@ func TestClassicStateMachine_calculateStates(t *testing.T) {
 			},
 		},
 		{
-			name:            "state_prebuilt_gadget",
-			imageDefinition: "test_prebuilt_gadget.yaml",
+			name:     "state_prebuilt_gadget",
+			snapList: "test_prebuilt_gadget.yaml",
 			expectedStates: []string{
 				"build_gadget_tree",
 				"prepare_gadget_tree",
@@ -224,8 +224,8 @@ func TestClassicStateMachine_calculateStates(t *testing.T) {
 			},
 		},
 		{
-			name:            "state_prebuilt_rootfs_extras",
-			imageDefinition: "test_prebuilt_rootfs_extras.yaml",
+			name:     "state_prebuilt_rootfs_extras",
+			snapList: "test_prebuilt_rootfs_extras.yaml",
 			expectedStates: []string{
 				"build_gadget_tree",
 				"prepare_gadget_tree",
@@ -251,8 +251,8 @@ func TestClassicStateMachine_calculateStates(t *testing.T) {
 			},
 		},
 		{
-			name:            "state_ppa",
-			imageDefinition: "test_amd64.yaml",
+			name:     "state_ppa",
+			snapList: "test_amd64.yaml",
 			expectedStates: []string{
 				"build_gadget_tree",
 				"prepare_gadget_tree",
@@ -282,8 +282,8 @@ func TestClassicStateMachine_calculateStates(t *testing.T) {
 			},
 		},
 		{
-			name:            "extract_rootfs_tar",
-			imageDefinition: "test_extract_rootfs_tar.yaml",
+			name:     "extract_rootfs_tar",
+			snapList: "test_extract_rootfs_tar.yaml",
 			expectedStates: []string{
 				"build_gadget_tree",
 				"prepare_gadget_tree",
@@ -305,8 +305,8 @@ func TestClassicStateMachine_calculateStates(t *testing.T) {
 			},
 		},
 		{
-			name:            "extract_rootfs_tar_no_customization",
-			imageDefinition: "test_extract_rootfs_tar_no_customization.yaml",
+			name:     "extract_rootfs_tar_no_customization",
+			snapList: "test_extract_rootfs_tar_no_customization.yaml",
 			expectedStates: []string{
 				"build_gadget_tree",
 				"prepare_gadget_tree",
@@ -326,8 +326,8 @@ func TestClassicStateMachine_calculateStates(t *testing.T) {
 			},
 		},
 		{
-			name:            "build_rootfs_from_seed",
-			imageDefinition: "test_rootfs_seed.yaml",
+			name:     "build_rootfs_from_seed",
+			snapList: "test_rootfs_seed.yaml",
 			expectedStates: []string{
 				"build_gadget_tree",
 				"prepare_gadget_tree",
@@ -352,8 +352,8 @@ func TestClassicStateMachine_calculateStates(t *testing.T) {
 			},
 		},
 		{
-			name:            "build_rootfs_from_tasks",
-			imageDefinition: "test_rootfs_tasks.yaml",
+			name:     "build_rootfs_from_tasks",
+			snapList: "test_rootfs_tasks.yaml",
 			expectedStates: []string{
 				"build_gadget_tree",
 				"prepare_gadget_tree",
@@ -374,8 +374,8 @@ func TestClassicStateMachine_calculateStates(t *testing.T) {
 			},
 		},
 		{
-			name:            "customization_states",
-			imageDefinition: "test_customization.yaml",
+			name:     "customization_states",
+			snapList: "test_customization.yaml",
 			expectedStates: []string{
 				"build_gadget_tree",
 				"prepare_gadget_tree",
@@ -403,8 +403,8 @@ func TestClassicStateMachine_calculateStates(t *testing.T) {
 			},
 		},
 		{
-			name:            "qcow2",
-			imageDefinition: "test_qcow2.yaml",
+			name:     "qcow2",
+			snapList: "test_qcow2.yaml",
 			expectedStates: []string{
 				"build_gadget_tree",
 				"prepare_gadget_tree",
@@ -431,8 +431,8 @@ func TestClassicStateMachine_calculateStates(t *testing.T) {
 			},
 		},
 		{
-			name:            "no artifact",
-			imageDefinition: "test_no_artifact.yaml",
+			name:     "no artifact",
+			snapList: "test_no_artifact.yaml",
 			expectedStates: []string{
 				"build_gadget_tree",
 				"prepare_gadget_tree",
@@ -462,8 +462,8 @@ func TestClassicStateMachine_calculateStates(t *testing.T) {
 			var stateMachine ClassicStateMachine
 			stateMachine.commonFlags, stateMachine.stateMachineFlags = helper.InitCommonOpts()
 			stateMachine.parent = &stateMachine
-			stateMachine.Args.ImageDefinition = filepath.Join("testdata", "image_definitions", tc.imageDefinition)
-			err := stateMachine.parseImageDefinition()
+			stateMachine.Args.SnapList = filepath.Join("testdata", "image_definitions", tc.snapList)
+			err := stateMachine.parseSnapList()
 			asserter.AssertErrNil(err, true)
 
 			err = stateMachine.calculateStates()
@@ -489,15 +489,15 @@ func TestFailedCalculateStates(t *testing.T) {
 	var stateMachine ClassicStateMachine
 	stateMachine.commonFlags, stateMachine.stateMachineFlags = helper.InitCommonOpts()
 	stateMachine.parent = &stateMachine
-	stateMachine.ImageDef = imagedefinition.ImageDefinition{
-		Gadget: &imagedefinition.Gadget{
+	stateMachine.ImageDef = snaplist.SnapList{
+		Gadget: &snaplist.Gadget{
 			GadgetType: "git",
 		},
-		Rootfs: &imagedefinition.Rootfs{
+		Rootfs: &snaplist.Rootfs{
 			ArchiveTasks: []string{"test"},
 		},
-		Customization: &imagedefinition.Customization{},
-		Artifacts:     &imagedefinition.Artifact{},
+		Customization: &snaplist.Customization{},
+		Artifacts:     &snaplist.Artifact{},
 	}
 
 	// mock helper.CheckTags
@@ -521,8 +521,8 @@ func TestDisplayStates(t *testing.T) {
 	stateMachine.parent = &stateMachine
 	stateMachine.commonFlags.Debug = true
 	stateMachine.commonFlags.DiskInfo = "test" // for coverage!
-	stateMachine.Args.ImageDefinition = filepath.Join("testdata", "image_definitions", "test_raspi.yaml")
-	err := stateMachine.parseImageDefinition()
+	stateMachine.Args.SnapList = filepath.Join("testdata", "image_definitions", "test_raspi.yaml")
+	err := stateMachine.parseSnapList()
 	asserter.AssertErrNil(err, true)
 
 	// capture stdout, calculate the states, and ensure they were printed
@@ -625,7 +625,7 @@ func TestFailedReadMetadataClassic(t *testing.T) {
 	stateMachine.commonFlags, stateMachine.stateMachineFlags = helper.InitCommonOpts()
 	stateMachine.stateMachineFlags.Resume = true
 	stateMachine.stateMachineFlags.WorkDir = testDir
-	stateMachine.Args.ImageDefinition = filepath.Join("testdata", "image_definitions",
+	stateMachine.Args.SnapList = filepath.Join("testdata", "image_definitions",
 		"test_amd64.yaml")
 
 	err := stateMachine.Setup()
@@ -643,7 +643,7 @@ func TestClassicStateMachine_Setup_Fail_makeTemporaryDirectories(t *testing.T) {
 	var stateMachine ClassicStateMachine
 	stateMachine.commonFlags, stateMachine.stateMachineFlags = helper.InitCommonOpts()
 	stateMachine.stateMachineFlags.WorkDir = testDir
-	stateMachine.Args.ImageDefinition = filepath.Join("testdata", "image_definitions",
+	stateMachine.Args.SnapList = filepath.Join("testdata", "image_definitions",
 		"test_amd64.yaml")
 
 	// mock os.MkdirAll
@@ -664,7 +664,7 @@ func TestClassicStateMachine_Setup_Fail_determineOutputDirectory(t *testing.T) {
 
 	var stateMachine ClassicStateMachine
 	stateMachine.commonFlags, stateMachine.stateMachineFlags = helper.InitCommonOpts()
-	stateMachine.Args.ImageDefinition = filepath.Join("testdata", "image_definitions",
+	stateMachine.Args.SnapList = filepath.Join("testdata", "image_definitions",
 		"test_amd64.yaml")
 	stateMachine.commonFlags.OutputDir = "/tmp/test"
 
@@ -692,7 +692,7 @@ func TestClassicStateMachine_DryRun(t *testing.T) {
 	var stateMachine ClassicStateMachine
 	stateMachine.commonFlags, stateMachine.stateMachineFlags = helper.InitCommonOpts()
 	stateMachine.parent = &stateMachine
-	stateMachine.Args.ImageDefinition = filepath.Join("testdata", "image_definitions",
+	stateMachine.Args.SnapList = filepath.Join("testdata", "image_definitions",
 		"test_amd64.yaml")
 	stateMachine.stateMachineFlags.WorkDir = workDir
 	stateMachine.commonFlags.DryRun = true
@@ -720,9 +720,9 @@ func TestVerifyArtifactNames(t *testing.T) {
 	testCases := []struct {
 		name             string
 		gadgetYAML       string
-		artifacts        *imagedefinition.Artifact
-		img              *[]imagedefinition.Img
-		qcow2            *[]imagedefinition.Qcow2
+		artifacts        *snaplist.Artifact
+		img              *[]snaplist.Img
+		qcow2            *[]snaplist.Qcow2
 		expectedVolNames map[string]string
 		shouldPass       bool
 	}{
@@ -736,8 +736,8 @@ func TestVerifyArtifactNames(t *testing.T) {
 		{
 			name:       "single_volume_specified",
 			gadgetYAML: "gadget_tree/meta/gadget.yaml",
-			artifacts: &imagedefinition.Artifact{
-				Img: &[]imagedefinition.Img{
+			artifacts: &snaplist.Artifact{
+				Img: &[]snaplist.Img{
 					{
 						ImgName:   "test1.img",
 						ImgVolume: "pc",
@@ -752,8 +752,8 @@ func TestVerifyArtifactNames(t *testing.T) {
 		{
 			name:       "single_volume_not_specified",
 			gadgetYAML: "gadget_tree/meta/gadget.yaml",
-			artifacts: &imagedefinition.Artifact{
-				Img: &[]imagedefinition.Img{
+			artifacts: &snaplist.Artifact{
+				Img: &[]snaplist.Img{
 					{
 						ImgName: "test-single.img",
 					},
@@ -767,8 +767,8 @@ func TestVerifyArtifactNames(t *testing.T) {
 		{
 			name:       "mutli_volume_specified",
 			gadgetYAML: "gadget-multi.yaml",
-			artifacts: &imagedefinition.Artifact{
-				Img: &[]imagedefinition.Img{
+			artifacts: &snaplist.Artifact{
+				Img: &[]snaplist.Img{
 					{
 						ImgName:   "test1.img",
 						ImgVolume: "first",
@@ -798,8 +798,8 @@ func TestVerifyArtifactNames(t *testing.T) {
 		{
 			name:       "mutli_volume_not_specified",
 			gadgetYAML: "gadget-multi.yaml",
-			artifacts: &imagedefinition.Artifact{
-				Img: &[]imagedefinition.Img{
+			artifacts: &snaplist.Artifact{
+				Img: &[]snaplist.Img{
 					{
 						ImgName: "test1.img",
 					},
@@ -820,8 +820,8 @@ func TestVerifyArtifactNames(t *testing.T) {
 		{
 			name:       "mutli_volume_some_specified",
 			gadgetYAML: "gadget-multi.yaml",
-			artifacts: &imagedefinition.Artifact{
-				Img: &[]imagedefinition.Img{
+			artifacts: &snaplist.Artifact{
+				Img: &[]snaplist.Img{
 					{
 						ImgName:   "test1.img",
 						ImgVolume: "first",
@@ -844,8 +844,8 @@ func TestVerifyArtifactNames(t *testing.T) {
 		{
 			name:       "mutli_volume_only_create_some_images",
 			gadgetYAML: "gadget-multi.yaml",
-			artifacts: &imagedefinition.Artifact{
-				Img: &[]imagedefinition.Img{
+			artifacts: &snaplist.Artifact{
+				Img: &[]snaplist.Img{
 					{
 						ImgName:   "test1.img",
 						ImgVolume: "first",
@@ -865,8 +865,8 @@ func TestVerifyArtifactNames(t *testing.T) {
 		{
 			name:       "qcow2_single_volume_no_img",
 			gadgetYAML: "gadget_tree/meta/gadget.yaml",
-			artifacts: &imagedefinition.Artifact{
-				Qcow2: &[]imagedefinition.Qcow2{
+			artifacts: &snaplist.Artifact{
+				Qcow2: &[]snaplist.Qcow2{
 					{
 						Qcow2Name:   "test1.qcow2",
 						Qcow2Volume: "pc",
@@ -881,8 +881,8 @@ func TestVerifyArtifactNames(t *testing.T) {
 		{
 			name:       "qcow2_single_volume_not_specified_no_img",
 			gadgetYAML: "gadget_tree/meta/gadget.yaml",
-			artifacts: &imagedefinition.Artifact{
-				Qcow2: &[]imagedefinition.Qcow2{
+			artifacts: &snaplist.Artifact{
+				Qcow2: &[]snaplist.Qcow2{
 					{
 						Qcow2Name: "test1.qcow2",
 					},
@@ -896,14 +896,14 @@ func TestVerifyArtifactNames(t *testing.T) {
 		{
 			name:       "qcow2_single_volume_yes_img",
 			gadgetYAML: "gadget_tree/meta/gadget.yaml",
-			artifacts: &imagedefinition.Artifact{
-				Img: &[]imagedefinition.Img{
+			artifacts: &snaplist.Artifact{
+				Img: &[]snaplist.Img{
 					{
 						ImgName:   "test1.img",
 						ImgVolume: "pc",
 					},
 				},
-				Qcow2: &[]imagedefinition.Qcow2{
+				Qcow2: &[]snaplist.Qcow2{
 					{
 						Qcow2Name:   "test1.img",
 						Qcow2Volume: "pc",
@@ -918,8 +918,8 @@ func TestVerifyArtifactNames(t *testing.T) {
 		{
 			name:       "qcow2_mutli_volume_not_specified",
 			gadgetYAML: "gadget-multi.yaml",
-			artifacts: &imagedefinition.Artifact{
-				Qcow2: &[]imagedefinition.Qcow2{
+			artifacts: &snaplist.Artifact{
+				Qcow2: &[]snaplist.Qcow2{
 					{
 						Qcow2Name: "test1.img",
 					},
@@ -940,8 +940,8 @@ func TestVerifyArtifactNames(t *testing.T) {
 		{
 			name:       "qcow2_mutli_volume_no_img",
 			gadgetYAML: "gadget-multi.yaml",
-			artifacts: &imagedefinition.Artifact{
-				Qcow2: &[]imagedefinition.Qcow2{
+			artifacts: &snaplist.Artifact{
+				Qcow2: &[]snaplist.Qcow2{
 					{
 						Qcow2Name:   "test1.qcow2",
 						Qcow2Volume: "first",
@@ -971,8 +971,8 @@ func TestVerifyArtifactNames(t *testing.T) {
 		{
 			name:       "qcow2_mutli_volume_yes_img",
 			gadgetYAML: "gadget-multi.yaml",
-			artifacts: &imagedefinition.Artifact{
-				Img: &[]imagedefinition.Img{
+			artifacts: &snaplist.Artifact{
+				Img: &[]snaplist.Img{
 					{
 						ImgName:   "test1.img",
 						ImgVolume: "first",
@@ -990,7 +990,7 @@ func TestVerifyArtifactNames(t *testing.T) {
 						ImgVolume: "fourth",
 					},
 				},
-				Qcow2: &[]imagedefinition.Qcow2{
+				Qcow2: &[]snaplist.Qcow2{
 					{
 						Qcow2Name:   "test1.img",
 						Qcow2Volume: "first",
@@ -1020,8 +1020,8 @@ func TestVerifyArtifactNames(t *testing.T) {
 		{
 			name:       "qcow2_mutli_volume_img_for_different_volume",
 			gadgetYAML: "gadget-multi.yaml",
-			artifacts: &imagedefinition.Artifact{
-				Img: &[]imagedefinition.Img{
+			artifacts: &snaplist.Artifact{
+				Img: &[]snaplist.Img{
 					{
 						ImgName:   "test1.img",
 						ImgVolume: "first",
@@ -1031,7 +1031,7 @@ func TestVerifyArtifactNames(t *testing.T) {
 						ImgVolume: "second",
 					},
 				},
-				Qcow2: &[]imagedefinition.Qcow2{
+				Qcow2: &[]snaplist.Qcow2{
 					{
 						Qcow2Name:   "test3.qcow2",
 						Qcow2Volume: "third",
@@ -1062,13 +1062,13 @@ func TestVerifyArtifactNames(t *testing.T) {
 			stateMachine.parent = &stateMachine
 
 			stateMachine.YamlFilePath = filepath.Join("testdata", tc.gadgetYAML)
-			stateMachine.ImageDef = imagedefinition.ImageDefinition{
+			stateMachine.ImageDef = snaplist.SnapList{
 				Architecture: getHostArch(),
 				Series:       getHostSuite(),
-				Rootfs: &imagedefinition.Rootfs{
+				Rootfs: &snaplist.Rootfs{
 					Archive: "ubuntu",
 				},
-				Customization: &imagedefinition.Customization{},
+				Customization: &snaplist.Customization{},
 				Artifacts:     tc.artifacts,
 			}
 
@@ -1195,11 +1195,11 @@ func TestExtractRootfsTar(t *testing.T) {
 			var stateMachine ClassicStateMachine
 			stateMachine.commonFlags, stateMachine.stateMachineFlags = helper.InitCommonOpts()
 			stateMachine.parent = &stateMachine
-			stateMachine.ImageDef = imagedefinition.ImageDefinition{
+			stateMachine.ImageDef = snaplist.SnapList{
 				Architecture: getHostArch(),
 				Series:       getHostSuite(),
-				Rootfs: &imagedefinition.Rootfs{
-					Tarball: &imagedefinition.Tarball{
+				Rootfs: &snaplist.Rootfs{
+					Tarball: &snaplist.Tarball{
 						TarballURL: fmt.Sprintf("file://%s", tc.rootfsTar),
 					},
 				},
@@ -1236,11 +1236,11 @@ func TestFailedExtractRootfsTar(t *testing.T) {
 	stateMachine.commonFlags, stateMachine.stateMachineFlags = helper.InitCommonOpts()
 	stateMachine.parent = &stateMachine
 	tarPath := filepath.Join("testdata", "rootfs_tarballs", "rootfs.tar")
-	stateMachine.ImageDef = imagedefinition.ImageDefinition{
+	stateMachine.ImageDef = snaplist.SnapList{
 		Architecture: getHostArch(),
 		Series:       getHostSuite(),
-		Rootfs: &imagedefinition.Rootfs{
-			Tarball: &imagedefinition.Tarball{
+		Rootfs: &snaplist.Rootfs{
+			Tarball: &snaplist.Tarball{
 				TarballURL: fmt.Sprintf("file://%s", tarPath),
 				SHA256sum:  "fail",
 			},
@@ -1281,14 +1281,14 @@ func TestFailedExtractRootfsTar(t *testing.T) {
 func TestStateMachine_customizeCloudInit(t *testing.T) {
 	testCases := []struct {
 		name                   string
-		cloudInitCustomization imagedefinition.CloudInit
+		cloudInitCustomization snaplist.CloudInit
 		wantMetaData           string
 		wantUserData           string
 		wantNetworkConfig      string
 	}{
 		{
 			name: "full cloudinit conf",
-			cloudInitCustomization: imagedefinition.CloudInit{
+			cloudInitCustomization: snaplist.CloudInit{
 				MetaData: `#cloud-config
 
 foo: bar`,
@@ -1311,7 +1311,7 @@ foobar: foobar`,
 		},
 		{
 			name: "empty user data",
-			cloudInitCustomization: imagedefinition.CloudInit{
+			cloudInitCustomization: snaplist.CloudInit{
 				MetaData: `#cloud-config
 
 foo: bar`,
@@ -1330,7 +1330,7 @@ foobar: foobar`,
 		},
 		{
 			name: "empty metadata",
-			cloudInitCustomization: imagedefinition.CloudInit{
+			cloudInitCustomization: snaplist.CloudInit{
 				UserData: "",
 				NetworkConfig: `#cloud-config
 
@@ -1344,7 +1344,7 @@ foobar: foobar`,
 		},
 		{
 			name: "multiline user data",
-			cloudInitCustomization: imagedefinition.CloudInit{
+			cloudInitCustomization: snaplist.CloudInit{
 				UserData: `#cloud-config
 
 chpasswd:
@@ -1396,7 +1396,7 @@ chpasswd:
 			err = os.MkdirAll(path.Join(tmpDir, "etc/cloud/cloud.cfg.d"), 0777)
 			asserter.AssertErrNil(err, true)
 
-			stateMachine.ImageDef.Customization = &imagedefinition.Customization{
+			stateMachine.ImageDef.Customization = &snaplist.Customization{
 				CloudInit: &testCases[i].cloudInitCustomization,
 			}
 
@@ -1467,8 +1467,8 @@ func TestStatemachine_customizeCloudInit_failed(t *testing.T) {
 	t.Cleanup(func() { os.RemoveAll(tmpDir) })
 	stateMachine.tempDirs.chroot = tmpDir
 
-	stateMachine.ImageDef.Customization = &imagedefinition.Customization{
-		CloudInit: &imagedefinition.CloudInit{
+	stateMachine.ImageDef.Customization = &snaplist.Customization{
+		CloudInit: &snaplist.CloudInit{
 			MetaData:      `foo: bar`,
 			NetworkConfig: `foobar: foobar`,
 			UserData: `#cloud-config
@@ -1580,11 +1580,11 @@ chpasswd:
 	// Test cloud-init customization is invalid
 	testCases := []struct {
 		name                   string
-		cloudInitCustomization imagedefinition.CloudInit
+		cloudInitCustomization snaplist.CloudInit
 	}{
 		{
 			name: "invalid userdata",
-			cloudInitCustomization: imagedefinition.CloudInit{
+			cloudInitCustomization: snaplist.CloudInit{
 				UserData: "foo: bar",
 			},
 		},
@@ -1624,10 +1624,10 @@ func TestPrepareClassicImage(t *testing.T) {
 	stateMachine.parent = &stateMachine
 	stateMachine.Snaps = []string{"core20"}
 	stateMachine.commonFlags.Channel = "stable"
-	stateMachine.ImageDef = imagedefinition.ImageDefinition{
+	stateMachine.ImageDef = snaplist.SnapList{
 		Architecture: getHostArch(),
-		Customization: &imagedefinition.Customization{
-			ExtraSnaps: []*imagedefinition.Snap{
+		Customization: &snaplist.Customization{
+			ExtraSnaps: []*snaplist.Snap{
 				{
 					SnapName: "hello",
 					Channel:  "candidate",
@@ -1696,10 +1696,10 @@ func TestClassicSnapRevisions(t *testing.T) {
 	stateMachine.parent = &stateMachine
 	stateMachine.Snaps = []string{"lxd"}
 	stateMachine.commonFlags.Channel = "stable"
-	stateMachine.ImageDef = imagedefinition.ImageDefinition{
+	stateMachine.ImageDef = snaplist.SnapList{
 		Architecture: getHostArch(),
-		Customization: &imagedefinition.Customization{
-			ExtraSnaps: []*imagedefinition.Snap{
+		Customization: &snaplist.Customization{
+			ExtraSnaps: []*snaplist.Snap{
 				{
 					SnapName:     "hello",
 					SnapRevision: 38,
@@ -1764,10 +1764,10 @@ func TestFailedPrepareClassicImage(t *testing.T) {
 	var stateMachine ClassicStateMachine
 	stateMachine.commonFlags, stateMachine.stateMachineFlags = helper.InitCommonOpts()
 	stateMachine.parent = &stateMachine
-	stateMachine.ImageDef = imagedefinition.ImageDefinition{
+	stateMachine.ImageDef = snaplist.SnapList{
 		Architecture: getHostArch(),
-		Customization: &imagedefinition.Customization{
-			ExtraSnaps: []*imagedefinition.Snap{},
+		Customization: &snaplist.Customization{
+			ExtraSnaps: []*snaplist.Snap{},
 		},
 	}
 
@@ -1842,7 +1842,7 @@ func TestSateMachine_customizeSourcesList(t *testing.T) {
 		deb822Format              bool
 		existingSourcesList       string
 		existingDeb822SourcesList string
-		customization             *imagedefinition.Customization
+		customization             *snaplist.Customization
 		mockFuncs                 func() func()
 		expectedErr               string
 		expectedSourcesList       string
@@ -1852,7 +1852,7 @@ func TestSateMachine_customizeSourcesList(t *testing.T) {
 			name:                "set default sources.list",
 			deb822Format:        false,
 			existingSourcesList: "deb http://ports.ubuntu.com/ubuntu-ports jammy main restricted",
-			customization:       &imagedefinition.Customization{},
+			customization:       &snaplist.Customization{},
 			expectedSourcesList: fmt.Sprintf(`# See http://help.ubuntu.com/community/UpgradeNotes for how to upgrade to
 # newer versions of the distribution.
 deb http://archive.ubuntu.com/ubuntu/ %s main restricted universe
@@ -1862,7 +1862,7 @@ deb http://archive.ubuntu.com/ubuntu/ %s main restricted universe
 			name:                "set less components sources.list",
 			deb822Format:        false,
 			existingSourcesList: "deb http://ports.ubuntu.com/ubuntu-ports jammy main restricted",
-			customization: &imagedefinition.Customization{
+			customization: &snaplist.Customization{
 				Components: []string{"main"},
 			},
 			expectedSourcesList: fmt.Sprintf(`# See http://help.ubuntu.com/community/UpgradeNotes for how to upgrade to
@@ -1874,7 +1874,7 @@ deb http://archive.ubuntu.com/ubuntu/ %s main
 			name:                "set components and pocket sources.list",
 			deb822Format:        false,
 			existingSourcesList: "deb http://ports.ubuntu.com/ubuntu-ports jammy main restricted",
-			customization: &imagedefinition.Customization{
+			customization: &snaplist.Customization{
 				Components: []string{"main"},
 				Pocket:     "security",
 			},
@@ -1888,7 +1888,7 @@ deb http://security.ubuntu.com/ubuntu/ %[1]s-security main
 			name:                "fail to write sources.list",
 			deb822Format:        false,
 			existingSourcesList: "deb http://ports.ubuntu.com/ubuntu-ports jammy main restricted",
-			customization: &imagedefinition.Customization{
+			customization: &snaplist.Customization{
 				Components: []string{"main"},
 				Pocket:     "security",
 			},
@@ -1915,8 +1915,8 @@ Suites: %s
 Components: main universe restricted multiverse
 Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 `, series),
-			customization:       &imagedefinition.Customization{},
-			expectedSourcesList: imagedefinition.LegacySourcesListComment,
+			customization:       &snaplist.Customization{},
+			expectedSourcesList: snaplist.LegacySourcesListComment,
 			expectedDeb822SourcesList: fmt.Sprintf(`## Ubuntu distribution repository
 ##
 ## The following settings can be adjusted to configure which packages to use from Ubuntu.
@@ -1971,7 +1971,7 @@ Suites: %s
 Components: main universe restricted multiverse
 Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 `, series),
-			customization:       &imagedefinition.Customization{},
+			customization:       &snaplist.Customization{},
 			expectedSourcesList: "deb http://ports.ubuntu.com/ubuntu-ports jammy main restricted",
 			expectedDeb822SourcesList: fmt.Sprintf(`Types: deb
 URIs: http://archive.ubuntu.com/
@@ -2001,7 +2001,7 @@ Suites: %s
 Components: main universe restricted multiverse
 Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 `, series),
-			customization:       &imagedefinition.Customization{},
+			customization:       &snaplist.Customization{},
 			expectedSourcesList: "deb http://ports.ubuntu.com/ubuntu-ports jammy main restricted",
 			expectedDeb822SourcesList: fmt.Sprintf(`Types: deb
 URIs: http://archive.ubuntu.com/
@@ -2032,10 +2032,10 @@ Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 			var stateMachine ClassicStateMachine
 			stateMachine.commonFlags, stateMachine.stateMachineFlags = helper.InitCommonOpts()
 			stateMachine.parent = &stateMachine
-			stateMachine.ImageDef = imagedefinition.ImageDefinition{
+			stateMachine.ImageDef = snaplist.SnapList{
 				Architecture: getHostArch(),
 				Series:       series,
-				Rootfs: &imagedefinition.Rootfs{
+				Rootfs: &snaplist.Rootfs{
 					SourcesListDeb822: helper.BoolPtr(tc.deb822Format),
 				},
 				Customization: tc.customization,
@@ -2145,11 +2145,11 @@ UUID=1234-5678	/	ext4	defaults	0	0
 			var stateMachine ClassicStateMachine
 			stateMachine.commonFlags, stateMachine.stateMachineFlags = helper.InitCommonOpts()
 			stateMachine.parent = &stateMachine
-			stateMachine.ImageDef = imagedefinition.ImageDefinition{
+			stateMachine.ImageDef = snaplist.SnapList{
 				Architecture:  getHostArch(),
 				Series:        getHostSuite(),
-				Rootfs:        &imagedefinition.Rootfs{},
-				Customization: &imagedefinition.Customization{},
+				Rootfs:        &snaplist.Rootfs{},
+				Customization: &snaplist.Customization{},
 			}
 
 			// set the defaults for the imageDef
@@ -2206,15 +2206,15 @@ func TestGeneratePackageManifest(t *testing.T) {
 	stateMachine.commonFlags, stateMachine.stateMachineFlags = helper.InitCommonOpts()
 	stateMachine.parent = &stateMachine
 	stateMachine.commonFlags.OutputDir = outputDir
-	stateMachine.ImageDef = imagedefinition.ImageDefinition{
+	stateMachine.ImageDef = snaplist.SnapList{
 		Architecture: getHostArch(),
 		Series:       getHostSuite(),
-		Rootfs: &imagedefinition.Rootfs{
+		Rootfs: &snaplist.Rootfs{
 			Archive: "ubuntu",
 		},
-		Customization: &imagedefinition.Customization{},
-		Artifacts: &imagedefinition.Artifact{
-			Manifest: &imagedefinition.Manifest{
+		Customization: &snaplist.Customization{},
+		Artifacts: &snaplist.Artifact{
+			Manifest: &snaplist.Manifest{
 				ManifestName: "filesystem.manifest",
 			},
 		},
@@ -2246,15 +2246,15 @@ func TestFailedGeneratePackageManifest(t *testing.T) {
 	var stateMachine ClassicStateMachine
 	stateMachine.commonFlags, stateMachine.stateMachineFlags = helper.InitCommonOpts()
 	stateMachine.parent = &stateMachine
-	stateMachine.ImageDef = imagedefinition.ImageDefinition{
+	stateMachine.ImageDef = snaplist.SnapList{
 		Architecture: getHostArch(),
 		Series:       getHostSuite(),
-		Rootfs: &imagedefinition.Rootfs{
+		Rootfs: &snaplist.Rootfs{
 			Archive: "ubuntu",
 		},
-		Customization: &imagedefinition.Customization{},
-		Artifacts: &imagedefinition.Artifact{
-			Manifest: &imagedefinition.Manifest{
+		Customization: &snaplist.Customization{},
+		Artifacts: &snaplist.Artifact{
+			Manifest: &snaplist.Manifest{
 				ManifestName: "filesystem.manifest",
 			},
 		},
@@ -2312,15 +2312,15 @@ func TestGenerateFilelist(t *testing.T) {
 	stateMachine.commonFlags, stateMachine.stateMachineFlags = helper.InitCommonOpts()
 	stateMachine.parent = &stateMachine
 	stateMachine.commonFlags.OutputDir = outputDir
-	stateMachine.ImageDef = imagedefinition.ImageDefinition{
+	stateMachine.ImageDef = snaplist.SnapList{
 		Architecture: getHostArch(),
 		Series:       getHostSuite(),
-		Rootfs: &imagedefinition.Rootfs{
+		Rootfs: &snaplist.Rootfs{
 			Archive: "ubuntu",
 		},
-		Customization: &imagedefinition.Customization{},
-		Artifacts: &imagedefinition.Artifact{
-			Filelist: &imagedefinition.Filelist{
+		Customization: &snaplist.Customization{},
+		Artifacts: &snaplist.Artifact{
+			Filelist: &snaplist.Filelist{
 				FilelistName: "filesystem.filelist",
 			},
 		},
@@ -2358,15 +2358,15 @@ func TestFailedGenerateFilelist(t *testing.T) {
 	var stateMachine ClassicStateMachine
 	stateMachine.commonFlags, stateMachine.stateMachineFlags = helper.InitCommonOpts()
 	stateMachine.parent = &stateMachine
-	stateMachine.ImageDef = imagedefinition.ImageDefinition{
+	stateMachine.ImageDef = snaplist.SnapList{
 		Architecture: getHostArch(),
 		Series:       getHostSuite(),
-		Rootfs: &imagedefinition.Rootfs{
+		Rootfs: &snaplist.Rootfs{
 			Archive: "ubuntu",
 		},
-		Customization: &imagedefinition.Customization{},
-		Artifacts: &imagedefinition.Artifact{
-			Filelist: &imagedefinition.Filelist{
+		Customization: &snaplist.Customization{},
+		Artifacts: &snaplist.Artifact{
+			Filelist: &snaplist.Filelist{
 				FilelistName: "filesystem.filelist",
 			},
 		},
@@ -2428,7 +2428,7 @@ func TestSuccessfulClassicRun(t *testing.T) {
 	stateMachine.commonFlags.Debug = true
 	stateMachine.commonFlags.Size = "5G"
 	stateMachine.commonFlags.OutputDir = outputDir
-	stateMachine.Args.ImageDefinition = filepath.Join("testdata", "image_definitions",
+	stateMachine.Args.SnapList = filepath.Join("testdata", "image_definitions",
 		"test_amd64.yaml")
 
 	err = stateMachine.Setup()
@@ -2769,7 +2769,7 @@ Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 	// check if components and pocket correctly setup in /etc/apt/sources.list
 	aptSourcesListBytes, err := os.ReadFile(filepath.Join(mountDir, "etc", "apt", "sources.list"))
 	asserter.AssertErrNil(err, true)
-	asserter.AssertEqual(imagedefinition.LegacySourcesListComment, string(aptSourcesListBytes))
+	asserter.AssertEqual(snaplist.LegacySourcesListComment, string(aptSourcesListBytes))
 }
 
 // TestSuccessfulClassicRunNoArtifact runs through a full classic state machine run without artifact
@@ -2793,7 +2793,7 @@ func TestSuccessfulClassicRunNoArtifact(t *testing.T) {
 	stateMachine.commonFlags.Debug = true
 	stateMachine.commonFlags.Size = "5G"
 	stateMachine.commonFlags.OutputDir = outputDir
-	stateMachine.Args.ImageDefinition = filepath.Join("testdata", "image_definitions",
+	stateMachine.Args.SnapList = filepath.Join("testdata", "image_definitions",
 		"test_no_artifact.yaml")
 
 	err = stateMachine.Setup()
@@ -2835,7 +2835,7 @@ func TestSuccessfulRootfsGeneration(t *testing.T) {
 	stateMachine.commonFlags.Debug = true
 	stateMachine.commonFlags.Size = "5G"
 	stateMachine.commonFlags.OutputDir = outputDir
-	stateMachine.Args.ImageDefinition = filepath.Join("testdata", "image_definitions",
+	stateMachine.Args.SnapList = filepath.Join("testdata", "image_definitions",
 		"test_rootfs_tarball.yaml")
 
 	err = stateMachine.Setup()
@@ -2937,13 +2937,13 @@ func TestGerminate(t *testing.T) {
 
 			hostArch := getHostArch()
 			series := "noble"
-			imageDef := imagedefinition.ImageDefinition{
+			imageDef := snaplist.SnapList{
 				Architecture: hostArch,
 				Series:       series,
-				Rootfs: &imagedefinition.Rootfs{
+				Rootfs: &snaplist.Rootfs{
 					Flavor: tc.flavor,
 					Mirror: "http://archive.ubuntu.com/ubuntu/",
-					Seed: &imagedefinition.Seed{
+					Seed: &snaplist.Seed{
 						SeedURLs:   tc.seedURLs,
 						SeedBranch: series,
 						Names:      tc.seedNames,
@@ -3013,16 +3013,16 @@ func TestFailedGerminate(t *testing.T) {
 	err := stateMachine.makeTemporaryDirectories()
 	asserter.AssertErrNil(err, true)
 
-	// create a valid imageDefinition
+	// create a valid snapList
 	hostArch := getHostArch()
 	hostSuite := getHostSuite()
-	imageDef := imagedefinition.ImageDefinition{
+	imageDef := snaplist.SnapList{
 		Architecture: hostArch,
 		Series:       hostSuite,
-		Rootfs: &imagedefinition.Rootfs{
+		Rootfs: &snaplist.Rootfs{
 			Flavor: "ubuntu",
 			Mirror: "http://archive.ubuntu.com/ubuntu/",
-			Seed: &imagedefinition.Seed{
+			Seed: &snaplist.Seed{
 				SeedURLs:   []string{"git://git.launchpad.net/~ubuntu-core-dev/ubuntu-seeds/+git/"},
 				SeedBranch: hostSuite,
 				Names:      []string{"server", "minimal", "standard", "cloud-image"},
@@ -3217,12 +3217,12 @@ func TestStateMachine_installPackages_fail(t *testing.T) {
 	var stateMachine ClassicStateMachine
 	stateMachine.commonFlags, stateMachine.stateMachineFlags = helper.InitCommonOpts()
 	stateMachine.parent = &stateMachine
-	stateMachine.ImageDef = imagedefinition.ImageDefinition{
+	stateMachine.ImageDef = snaplist.SnapList{
 		Architecture: getHostArch(),
 		Series:       getHostSuite(),
-		Rootfs:       &imagedefinition.Rootfs{},
-		Customization: &imagedefinition.Customization{
-			ExtraPackages: []*imagedefinition.Package{
+		Rootfs:       &snaplist.Rootfs{},
+		Customization: &snaplist.Customization{
+			ExtraPackages: []*snaplist.Package{
 				{
 					PackageName: "test1",
 				},
@@ -3336,13 +3336,13 @@ func Test_generateMountPointCmds_fail(t *testing.T) {
 func TestCustomizeFstab(t *testing.T) {
 	testCases := []struct {
 		name          string
-		fstab         []*imagedefinition.Fstab
+		fstab         []*snaplist.Fstab
 		expectedFstab string
 		existingFstab string
 	}{
 		{
 			name: "one entry to an empty fstab",
-			fstab: []*imagedefinition.Fstab{
+			fstab: []*snaplist.Fstab{
 				{
 					Label:        "writable",
 					Mountpoint:   "/",
@@ -3357,7 +3357,7 @@ func TestCustomizeFstab(t *testing.T) {
 		},
 		{
 			name: "one entry to a non-empty fstab",
-			fstab: []*imagedefinition.Fstab{
+			fstab: []*snaplist.Fstab{
 				{
 					Label:        "writable",
 					Mountpoint:   "/",
@@ -3373,7 +3373,7 @@ func TestCustomizeFstab(t *testing.T) {
 		},
 		{
 			name: "two entries",
-			fstab: []*imagedefinition.Fstab{
+			fstab: []*snaplist.Fstab{
 				{
 					Label:        "writable",
 					Mountpoint:   "/",
@@ -3406,11 +3406,11 @@ LABEL=system-boot	/boot/firmware	vfat	defaults	0	1
 			var stateMachine ClassicStateMachine
 			stateMachine.commonFlags, stateMachine.stateMachineFlags = helper.InitCommonOpts()
 			stateMachine.parent = &stateMachine
-			stateMachine.ImageDef = imagedefinition.ImageDefinition{
+			stateMachine.ImageDef = snaplist.SnapList{
 				Architecture: getHostArch(),
 				Series:       getHostSuite(),
-				Rootfs:       &imagedefinition.Rootfs{},
-				Customization: &imagedefinition.Customization{
+				Rootfs:       &snaplist.Rootfs{},
+				Customization: &snaplist.Customization{
 					Fstab: tc.fstab,
 				},
 			}
@@ -3458,12 +3458,12 @@ func TestStateMachine_customizeFstab_fail(t *testing.T) {
 	var stateMachine ClassicStateMachine
 	stateMachine.commonFlags, stateMachine.stateMachineFlags = helper.InitCommonOpts()
 	stateMachine.parent = &stateMachine
-	stateMachine.ImageDef = imagedefinition.ImageDefinition{
+	stateMachine.ImageDef = snaplist.SnapList{
 		Architecture: getHostArch(),
 		Series:       getHostSuite(),
-		Rootfs:       &imagedefinition.Rootfs{},
-		Customization: &imagedefinition.Customization{
-			Fstab: []*imagedefinition.Fstab{
+		Rootfs:       &snaplist.Rootfs{},
+		Customization: &snaplist.Customization{
+			Fstab: []*snaplist.Fstab{
 				{
 					Label:        "writable",
 					Mountpoint:   "/",
@@ -3500,14 +3500,14 @@ func TestPreseedResetChroot(t *testing.T) {
 	stateMachine.parent = &stateMachine
 	stateMachine.Snaps = []string{"lxd"}
 	stateMachine.commonFlags.Channel = "stable"
-	stateMachine.ImageDef = imagedefinition.ImageDefinition{
+	stateMachine.ImageDef = snaplist.SnapList{
 		Architecture: getHostArch(),
 		Series:       getHostSuite(),
-		Rootfs: &imagedefinition.Rootfs{
+		Rootfs: &snaplist.Rootfs{
 			Archive: "ubuntu",
 		},
-		Customization: &imagedefinition.Customization{
-			ExtraPackages: []*imagedefinition.Package{
+		Customization: &snaplist.Customization{
+			ExtraPackages: []*snaplist.Package{
 				{
 					PackageName: "squashfs-tools",
 				},
@@ -3515,7 +3515,7 @@ func TestPreseedResetChroot(t *testing.T) {
 					PackageName: "snapd",
 				},
 			},
-			ExtraSnaps: []*imagedefinition.Snap{
+			ExtraSnaps: []*snaplist.Snap{
 				{
 					SnapName: "hello",
 				},
@@ -3553,10 +3553,10 @@ func TestPreseedResetChroot(t *testing.T) {
 	asserter.AssertErrNil(err, true)
 
 	// set up a new set of snaps to be installed
-	stateMachine.ImageDef = imagedefinition.ImageDefinition{
+	stateMachine.ImageDef = snaplist.SnapList{
 		Architecture: getHostArch(),
-		Customization: &imagedefinition.Customization{
-			ExtraSnaps: []*imagedefinition.Snap{
+		Customization: &snaplist.Customization{
+			ExtraSnaps: []*snaplist.Snap{
 				{
 					SnapName: "ubuntu-image",
 				},
@@ -3596,14 +3596,14 @@ func TestPreseedClassicImage(t *testing.T) {
 	stateMachine.parent = &stateMachine
 	stateMachine.Snaps = []string{"lxd"}
 	stateMachine.commonFlags.Channel = "stable"
-	stateMachine.ImageDef = imagedefinition.ImageDefinition{
+	stateMachine.ImageDef = snaplist.SnapList{
 		Architecture: getHostArch(),
 		Series:       getHostSuite(),
-		Rootfs: &imagedefinition.Rootfs{
+		Rootfs: &snaplist.Rootfs{
 			Archive: "ubuntu",
 		},
-		Customization: &imagedefinition.Customization{
-			ExtraPackages: []*imagedefinition.Package{
+		Customization: &snaplist.Customization{
+			ExtraPackages: []*snaplist.Package{
 				{
 					PackageName: "squashfs-tools",
 				},
@@ -3611,7 +3611,7 @@ func TestPreseedClassicImage(t *testing.T) {
 					PackageName: "snapd",
 				},
 			},
-			ExtraSnaps: []*imagedefinition.Snap{
+			ExtraSnaps: []*snaplist.Snap{
 				{
 					SnapName: "hello",
 				},
@@ -3814,14 +3814,14 @@ func TestClassicStateMachine_cleanRootfs_real_rootfs(t *testing.T) {
 	stateMachine.Snaps = []string{"lxd"}
 	stateMachine.commonFlags.Channel = "stable"
 	stateMachine.commonFlags.Debug = true
-	stateMachine.ImageDef = imagedefinition.ImageDefinition{
+	stateMachine.ImageDef = snaplist.SnapList{
 		Architecture: getHostArch(),
 		Series:       getHostSuite(),
-		Rootfs: &imagedefinition.Rootfs{
+		Rootfs: &snaplist.Rootfs{
 			Archive: "ubuntu",
 		},
-		Customization: &imagedefinition.Customization{
-			ExtraPackages: []*imagedefinition.Package{
+		Customization: &snaplist.Customization{
+			ExtraPackages: []*snaplist.Package{
 				{
 					PackageName: "squashfs-tools",
 				},

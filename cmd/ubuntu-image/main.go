@@ -36,24 +36,10 @@ Other than -w, these options are mutually exclusive. When -u or -t is given,
 the state machine can be resumed later with -r, but -w must be given in that
 case since the state is saved in a ubuntu-image.json file in the working directory.`
 
-func initStateMachine(imageType string, commonOpts *commands.CommonOpts, stateMachineOpts *commands.StateMachineOpts, ubuntuImageCommand *commands.UbuntuImageCommand) (statemachine.SmInterface, error) {
+func initStateMachine(commonOpts *commands.CommonOpts, stateMachineOpts *commands.StateMachineOpts, ubuntuImageCommand *commands.UbuntuImageCommand) (statemachine.SmInterface, error) {
 	var stateMachine statemachine.SmInterface
-	switch imageType {
-	case "snap":
-		stateMachine = &statemachine.SnapStateMachine{
-			Opts: ubuntuImageCommand.Snap.SnapOptsPassed,
-			Args: ubuntuImageCommand.Snap.SnapArgsPassed,
-		}
-	case "classic":
-		stateMachine = &statemachine.ClassicStateMachine{
-			Args: ubuntuImageCommand.Classic.ClassicArgsPassed,
-		}
-	case "pack":
-		stateMachine = &statemachine.PackStateMachine{
-			Opts: ubuntuImageCommand.Pack.PackOptsPassed,
-		}
-	default:
-		return nil, fmt.Errorf("unsupported command\n")
+	stateMachine = &statemachine.ClassicStateMachine{
+		Args: ubuntuImageCommand.Classic.ClassicArgsPassed,
 	}
 
 	stateMachine.SetCommonOpts(commonOpts, stateMachineOpts)
@@ -75,25 +61,6 @@ func executeStateMachine(sm statemachine.SmInterface) error {
 	}
 
 	return nil
-}
-
-// unhidePackOpts make pack options visible in help if the pack command is used
-// This should be removed when the pack command is made visible to everyone
-func unhidePackOpts(parser *flags.Parser) {
-	// Save given options before removing them temporarily
-	// otherwise the help will be displayed twice
-	opts := parser.Options
-	parser.Options = 0
-	defer func() { parser.Options = opts }()
-	// parse once to determine the active command
-	// we do not care about error here since we will reparse again
-	_, _ = parser.Parse() // nolint: errcheck
-
-	if parser.Active != nil {
-		if parser.Active.Name == "pack" {
-			parser.Active.Hidden = false
-		}
-	}
 }
 
 // parseFlags parses received flags and returns error code accordingly
@@ -173,8 +140,6 @@ func main() { //nolint: gocyclo
 	}
 	defer restoreStderr()
 
-	unhidePackOpts(parser)
-
 	// Parse the options provided and handle specific errors
 	err, code := parseFlags(parser, restoreStdout, restoreStderr, stdout, stderr, stateMachineOpts.Resume, commonOpts.Version)
 	if err != nil {
@@ -197,13 +162,8 @@ func main() { //nolint: gocyclo
 		return
 	}
 
-	var imageType string
-	if parser.Command.Active != nil {
-		imageType = parser.Command.Active.Name
-	}
-
 	// init the state machine
-	sm, err := initStateMachine(imageType, commonOpts, stateMachineOpts, ubuntuImageCommand)
+	sm, err := initStateMachine(commonOpts, stateMachineOpts, ubuntuImageCommand)
 	if err != nil {
 		fmt.Printf("Error: %s\n", err.Error())
 		osExit(1)

@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"operese/cedar/internal/helper"
-	"operese/cedar/internal/imagedefinition"
+	"operese/cedar/internal/snaplist"
 )
 
 var (
@@ -50,7 +50,7 @@ type PPAPrivateInterface interface {
 }
 
 // New instantiates the proper PPA implementation based on the deb822 flag
-func New(imageDefPPA *imagedefinition.PPA, deb822 bool, series string) PPAInterface {
+func New(imageDefPPA *snaplist.PPA, deb822 bool, series string) PPAInterface {
 	basePPA := BasePPA{
 		PPA:    imageDefPPA,
 		series: series,
@@ -73,7 +73,7 @@ func New(imageDefPPA *imagedefinition.PPA, deb822 bool, series string) PPAInterf
 
 // BasePPA holds fields and methods common to every PPAPrivateInterface implementation
 type BasePPA struct {
-	*imagedefinition.PPA
+	*snaplist.PPA
 	series     string
 	signingKey string
 }
@@ -104,7 +104,7 @@ func (p *BasePPA) url() string {
 func (p *BasePPA) removePPAFile(basePath string, fileName string) error {
 	sourcesListD := filepath.Join(basePath, sourcesListDPath)
 	if p.KeepEnabled == nil {
-		return imagedefinition.ErrKeepEnabledNil
+		return snaplist.ErrKeepEnabledNil
 	}
 
 	if *p.KeepEnabled {

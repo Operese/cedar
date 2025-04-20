@@ -12,23 +12,23 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"operese/cedar/internal/helper"
-	"operese/cedar/internal/imagedefinition"
+	"operese/cedar/internal/snaplist"
 )
 
 var (
-	imageDefPPA1 = &imagedefinition.PPA{
+	imageDefPPA1 = &snaplist.PPA{
 		Name:        "canonical-foundations/ubuntu-image",
 		Auth:        "sil2100:vVg74j6SM8WVltwpxDRJ",
 		Fingerprint: "CDE5112BD4104F975FC8A53FD4C0B668FD4C9139",
 		KeepEnabled: helper.BoolPtr(false),
 	}
-	imageDefPPA2 = &imagedefinition.PPA{
+	imageDefPPA2 = &snaplist.PPA{
 		Name:        "canonical-foundations/ubuntu-image",
 		Fingerprint: "",
 		KeepEnabled: helper.BoolPtr(true),
 	}
 
-	imageDefPPA3 = &imagedefinition.PPA{
+	imageDefPPA3 = &snaplist.PPA{
 		Name:        "canonical-foundations/ubuntu-image-private-test",
 		Auth:        "sil2100:vVg74j6SM8WVltwpxDRJ",
 		Fingerprint: "CDE5112BD4104F975FC8A53FD4C0B668FD4C9139",
@@ -114,7 +114,7 @@ var cmpOpts = []cmp.Option{
 
 func TestNew(t *testing.T) {
 	type args struct {
-		imageDefPPA *imagedefinition.PPA
+		imageDefPPA *snaplist.PPA
 		deb822      bool
 		series      string
 	}
@@ -204,7 +204,7 @@ func Test_ensureFingerprint(t *testing.T) {
 
 			ppa := &BasePPA{
 				series: "jammy",
-				PPA: &imagedefinition.PPA{
+				PPA: &snaplist.PPA{
 					Name:        "lpuser/ppaname",
 					Fingerprint: tc.currentFingerprint,
 				},
@@ -409,7 +409,7 @@ func TestRemove_fail(t *testing.T) {
 	p := &PPA{
 		PPAPrivateInterface: &Deb822PPA{
 			BasePPA{
-				PPA: &imagedefinition.PPA{
+				PPA: &snaplist.PPA{
 					Name:        "canonical-foundations/ubuntu-image",
 					Auth:        "sil2100:vVg74j6SM8WVltwpxDRJ",
 					Fingerprint: "CDE5112BD4104F975FC8A53FD4C0B668FD4C9139",
@@ -421,7 +421,7 @@ func TestRemove_fail(t *testing.T) {
 	}
 
 	err = p.Remove(tmpDirPath)
-	asserter.AssertErrContains(err, imagedefinition.ErrKeepEnabledNil.Error())
+	asserter.AssertErrContains(err, snaplist.ErrKeepEnabledNil.Error())
 
 	p = &PPA{
 		PPAPrivateInterface: &Deb822PPA{
@@ -491,7 +491,7 @@ Ht/skh2wZSHtJgejt9kqIKMho1wtYz7ZTqMtN9GJK0VONbHP0Xu6
 			ppa := &Deb822PPA{
 				BasePPA: BasePPA{
 					series: "jammy",
-					PPA: &imagedefinition.PPA{
+					PPA: &snaplist.PPA{
 						Name: "lpuser/ppaname",
 					},
 				},

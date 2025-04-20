@@ -1,4 +1,4 @@
-package imagedefinition
+package snaplist
 
 import "errors"
 
